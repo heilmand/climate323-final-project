@@ -45,12 +45,14 @@
 # Start with an over-arching paragraph to describe your approach as you see fit.
 
 # %%
+# imports the libraries needed for the project
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
 
+# time converter to datetime object for the OMNI data
 tconvert = lambda x: dt.datetime.strptime(str(x), '%Y-%m-%dT%H:%M:%S.%fZ')
-
+# reads the OMNI data into arrays
 data = np.genfromtxt('OMNI2_H0_MRG1HR_2201110.csv', names=True, delimiter=',', skip_header=78, encoding='utf-8',converters={0:tconvert}, dtype=None)
 
 time = data['TIME_AT_CENTER_OF_HOUR_yyyymmddThhmmsssssZ']
@@ -61,14 +63,18 @@ swtemp = data ['1AU_IP_PLASMA_TEMP_Deg_K']
 swdensity = data['1AU_IP_N_ION_Per_cc']
 dst = data['1H_DST_nT']
 
+# %%
 arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
+# maxs of the legitimate from OMNI
 filters = [80, 100, 1200, 60, 1*10**7]
-
+# filters out non data points to be null
 for array, threshold in zip(arrays, filters):
     for index, value in enumerate(array):
         if value >= threshold:
             array[index] = np.nan
 
+# %%
+# correlates data to labels
 data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
         'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
         'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
@@ -87,7 +93,28 @@ for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     ax.set_ylabel(ytext)
 fig.tight_layout()
 
-print('work now')
+# %% [markdown]
+# Between 2019 and 2022 most of the data is consistent, showing low solar activity. The end of the data specifically around 2024 shows a lot of variety demostrating higher solar activy aligning with the solar cycle with solar min in 2019 and solar max in 2024.
+
+# %%
+# creates a new figure for plots
+fig, axes = plt.subplots(6,1, figsize = (12,20))
+fig.suptitle('April 2023 CME\n')
+# for loop to add data to each plot
+for ax, (label, (x, y)) in zip(axes.flat, data.items()):
+    # add data to the plot
+    # narrows graph to just time around the 4/23/2023 CME
+    ax.set_xlim(dt.datetime(2023,4,22),dt.datetime(2023,4,27))
+    ax.plot(x,y)
+    # adds proper titles and labels
+    title, space, ytext = label.partition('|')
+    ax.set_title(title)   
+    ax.set_xlabel('Date')
+    ax.set_ylabel(ytext)
+fig.tight_layout()
+
+# %% [markdown]
+# During a CME the magnetic field at 1 AU increases at the arrival of the CME and conitnues to increase before decreasing after the passing of the CME. The solar wind velocity also increases when the storm arrives before decreasing slightly again and remaining steady. There is a small peak in the solar wind pressure, density and temperature at the arrival of the CME before it decreases again. Lastly, the DST Index decreases to negative during the CME before recovring. 
 
 # %% [markdown]
 # ### Question 1
