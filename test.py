@@ -8,6 +8,10 @@
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
+#   kernelspec:
+#     display_name: base
+#     language: python
+#     name: python3
 # ---
 
 # %% [markdown]
@@ -39,6 +43,51 @@
 # ## Approach and Results
 # Describe your approach for each question in the lab description and interpretation of the results for that question.
 # Start with an over-arching paragraph to describe your approach as you see fit.
+
+# %%
+import numpy as np
+import matplotlib.pyplot as plt
+import datetime as dt
+
+tconvert = lambda x: dt.datetime.strptime(str(x), '%Y-%m-%dT%H:%M:%S.%fZ')
+
+data = np.genfromtxt('OMNI2_H0_MRG1HR_2201110.csv', names=True, delimiter=',', skip_header=78, encoding='utf-8',converters={0:tconvert}, dtype=None)
+
+time = data['TIME_AT_CENTER_OF_HOUR_yyyymmddThhmmsssssZ']
+swavgB = data['1AU_IP_MAG_AVG_B_nT']
+swvelocity = data['1AU_IP_PLASMA_SPEED_Kms']
+swpressure = data['1AU_IP_FLOW_PRESSURE_nPa']
+swtemp = data ['1AU_IP_PLASMA_TEMP_Deg_K']
+swdensity = data['1AU_IP_N_ION_Per_cc']
+dst = data['1H_DST_nT']
+
+arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
+filters = [80, 100, 1200, 60, 1*10**7]
+
+for array, threshold in zip(arrays, filters):
+    for index, value in enumerate(array):
+        if value >= threshold:
+            array[index] = np.nan
+
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
+        'Plasma Temperature|Temperature (K)': (time,swtemp),
+        'Ion Number Density|Density (per cc)': (time,swdensity),
+        'DST Index|DST (nT)': (time,dst)}
+fig, axes = plt.subplots(6,1, figsize = (12,20))
+# for loop to add data to each plot
+for ax, (label, (x, y)) in zip(axes.flat, data.items()):
+    #add data to the plot
+    ax.plot(x,y)
+    # adds proper titles and labels
+    title, space, ytext = label.partition('|')
+    ax.set_title(title)   
+    ax.set_xlabel(r'Date $(year)$')
+    ax.set_ylabel(ytext)
+fig.tight_layout()
+
+print('work now')
 
 # %% [markdown]
 # ### Question 1
