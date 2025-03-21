@@ -61,6 +61,7 @@ swtemp = data ['1AU_IP_PLASMA_TEMP_Deg_K']
 swdensity = data['1AU_IP_N_ION_Per_cc']
 dst = data['1H_DST_nT']
 
+# %%
 arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
 filters = [80, 100, 1200, 60, 1*10**7]
 
@@ -69,6 +70,7 @@ for array, threshold in zip(arrays, filters):
         if value >= threshold:
             array[index] = np.nan
 
+# %%
 data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
         'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
         'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
@@ -87,7 +89,26 @@ for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     ax.set_ylabel(ytext)
 fig.tight_layout()
 
-print('work now')
+# %%
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
+        'Plasma Temperature|Temperature (K)': (time,swtemp),
+        'Ion Number Density|Density (per cc)': (time,swdensity),
+        'DST Index|DST (nT)': (time,dst)}
+
+fig, axes = plt.subplots(6,1, figsize = (12,20))
+# for loop to add data to each plot
+for ax, (label, (x, y)) in zip(axes.flat, data.items()):
+    #add data to the plot
+    ax.set_xlim(dt.datetime(2024,5,10),dt.datetime(2024,5,15))
+    ax.plot(x,y)
+    # adds proper titles and labels
+    title, space, ytext = label.partition('|')
+    ax.set_title(title)   
+    ax.set_xlabel(r'Date $(year)$')
+    ax.set_ylabel(ytext)
+fig.tight_layout()
 
 # %% [markdown]
 # ### Question 1
