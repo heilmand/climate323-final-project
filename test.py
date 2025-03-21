@@ -98,6 +98,7 @@ data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
         'DST Index|DST (nT)': (time,dst)}
 
 fig, axes = plt.subplots(6,1, figsize = (12,20))
+fig.suptitle('May 2024 Storm')
 # for loop to add data to each plot
 for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     #add data to the plot
@@ -106,7 +107,7 @@ for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
-    ax.set_xlabel(r'Date $(year)$')
+    ax.set_xlabel('Date')
     ax.set_ylabel(ytext)
 fig.tight_layout()
 
