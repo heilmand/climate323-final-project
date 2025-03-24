@@ -64,6 +64,7 @@ swdensity = data['1AU_IP_N_ION_Per_cc']
 dst = data['1H_DST_nT']
 
 # %%
+# values that need to be filtered due to null data points
 arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
 # maxs of the legitimate from OMNI
 filters = [80, 100, 1200, 60, 1*10**7]
@@ -96,6 +97,9 @@ fig.tight_layout()
 # %% [markdown]
 # Between 2019 and 2022 most of the data is consistent, showing low solar activity. The end of the data specifically around 2024 shows a lot of variety demostrating higher solar activy aligning with the solar cycle with solar min in 2019 and solar max in 2024.
 
+# %% [markdown]
+# While the most notable solar event from the plots is the May 2024 storm it is not the best example to show how solar wind parameters behave during a CME. This is because the May 2024 storm is the result of a cannibal CME which means that there were several CMEs that were back to back only a few hours apart. Therefore we decided to go with the April 23rd storm which was the result on a single CME to showcase how solar wind changes during a solar event. 
+
 # %%
 # creates a new figure for plots
 fig, axes = plt.subplots(6,1, figsize = (12,20))
@@ -114,7 +118,7 @@ for ax, (label, (x, y)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %% [markdown]
-# During a CME the magnetic field at 1 AU increases at the arrival of the CME and conitnues to increase before decreasing after the passing of the CME. The solar wind velocity also increases when the storm arrives before decreasing slightly again and remaining steady. There is a small peak in the solar wind pressure, density and temperature at the arrival of the CME before it decreases again. Lastly, the DST Index decreases to negative during the CME before recovring. 
+# During a CME the magnetic field at 1 AU increases at the arrival of the CME and conitnues to increase before decreasing after the passing of the CME. The solar wind velocity also increases when the storm arrives before decreasing slightly again and remaining steady. There is a small peak in the solar wind pressure, density and temperature at the arrival of the CME before it decreases again. Lastly, the DST Index decreases to negative during the CME before recovering. This behavior matches the the structure of a CME. Typically a CME will have a shock associated with where the fast solar wind from the CME over takes the slow solar wind in front forming the shock. However, there does not have to be a shock associated with the CME. This causes an increase in solar wind speed when the shock and CME reach Lagrange point 1. Since the shock is at the beginning there is a bigger increase at the start of the CME before decreasing a little while the magnetic cloud of the CME passes. In the magnetic cloud of a CME there is a magnetic field as the name suggests. However the magnetic cloud mainly contains the magnetic cloud and nothing else. Therefore, the magnetic field should increase at the arrival of the shock and continue to increase and stay at a higher value during the passing of the magnetic cloud. However the solar wind parameter should increase at the arrival of the shock due to the compression of the solar wind but then drop during the passing of the magnetic cloud which is seen with the April 23rd storm of 2023. Lastly the DST measures the impact of the magnetic field on Earth surface with Earth's magnetic field therefore is showcases the opposite effect of Lagrange point 1 by decreasing due to the CME before recovering back to around 0 nT.
 
 # %% [markdown]
 # ### Question 1
