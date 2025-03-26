@@ -102,8 +102,8 @@ fig.tight_layout()
 
 # %%
 # creates a new figure for plots
-fig, axes = plt.subplots(6,1, figsize = (12,20))
-fig.suptitle('April 2023 CME\n')
+fig, axes = plt.subplots(3,2, figsize = (12,12))
+fig.suptitle('April 2023 CME')
 # for loop to add data to each plot
 for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     # add data to the plot
