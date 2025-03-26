@@ -180,7 +180,6 @@ dominant_idx = np.argmax(power[valid_range])
 # Extract the dominant frequency in cycles/day
 dominant_freq = freq[valid_range][dominant_idx]
 
-# (Optional) This may not be accurate if indexing doesn't match original frequency array
 dominant_freq2 = freq[valid_range][dominant_idx]
 
 # Print the dominant frequency value (for debugging or info)
