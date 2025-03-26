@@ -172,18 +172,16 @@ plt.grid()
 plt.show()
 
 # Define frequency range of interest: 0.01 to 0.2 cycles/day (~5 to 100 days)
-valid_range = (freq > 0.01) & (freq < 0.2)
+#valid_range = (freq > 0.01) & (freq < 0.2)
 
 # Find the index of the dominant frequency (maximum power) within the valid range
-dominant_idx = np.argmax(power[valid_range])
+dominant_idx = np.argmax(power)
 
 # Extract the dominant frequency in cycles/day
-dominant_freq = freq[valid_range][dominant_idx]
-
-dominant_freq2 = freq[valid_range][dominant_idx]
+dominant_freq = freq[dominant_idx]
 
 # Print the dominant frequency value (for debugging or info)
-print(dominant_freq2)
+print(dominant_freq)
 
 # Print the dominant frequency and corresponding period (in days)
 print(f"Dominant frequency: {dominant_freq:.4f} cycles per day (~{1/dominant_freq:.1f} days)")
