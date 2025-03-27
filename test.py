@@ -135,28 +135,48 @@ def interpolate_nan(y):
     y[nans] = np.interp(x[nans], x[not_nans], y[not_nans])  # Interpolate NaNs
     return y
 
-# Copy the solar wind velocity data (assumed to be defined earlier)
-y = swvelocity.copy()
+def analyze_fft(data, dt_hours=1, top_k=6):
+    # Interpolate NaNs and prepare data
+    y = interpolate_nan(data.copy())
+    dt_days = dt_hours / 24
+    n = len(y)
 
-# Fill in missing values using linear interpolation
-y = interpolate_nan(y)
+    # Detrend and FFT
+    y_detrended = y - np.mean(y)
+    Y = fft(y_detrended)
+    freq = fftfreq(n, d=dt_days)
+    power = np.abs(Y)**2
 
-# Define the time step in days (data assumed to be hourly)
-dt_hours = 1            # Time step in hours
-dt_days = dt_hours / 24 # Convert to days
-n = len(y)              # Number of observations
+    # Filter to only positive frequencies
+    pos_mask = freq > 0
+    pos_freq = freq[pos_mask]
+    pos_power = power[pos_mask]
+    pos_indices = np.where(pos_mask)[0]
 
-# Remove the mean from the data to focus on fluctuations (detrending)
-y_detrended = y - np.mean(y)
+    # Get top-k harmonics
+    harmonics = []
+    for _ in range(top_k):
+        idx_in_pos = np.argmax(pos_power)
+        global_idx = pos_indices[idx_in_pos]
+        harmonic = {
+            'amplitude': power[global_idx],
+            'frequency': freq[global_idx],
+            'period_days': 1 / freq[global_idx],
+            'harmonic_index': global_idx
+        }
+        harmonics.append(harmonic)
+        pos_power[idx_in_pos] = 0  # Remove this peak
 
-# Perform Fast Fourier Transform (FFT) to move to frequency domain
-Y = fft(y_detrended)
+    return freq, power, n, harmonics
 
-# Get the frequency values corresponding to FFT result (in cycles per day)
-freq = fftfreq(n, d=dt_days)
+def sort_harmonics_by_index(harmonics):
+    sorted_h = sorted(harmonics, key=lambda h: h['harmonic_index'], reverse=True)
+    return sorted_h
+#sw
+freq, power, n, harmonics = analyze_fft(swvelocity)
+sorted = sort_harmonics_by_index(harmonics)
+print(sorted)
 
-# Compute the power spectrum (squared magnitude of FFT result)
-power = np.abs(Y)**2
 
 # Plot the power spectrum (positive frequencies only)
 plt.figure(figsize=(10, 4))
