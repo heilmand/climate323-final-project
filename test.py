@@ -169,14 +169,13 @@ def analyze_fft(data, dt_hours=1, top_k=6):
 
     return freq, power, n, harmonics
 
-def sort_harmonics_by_index(harmonics):
-    sorted_h = sorted(harmonics, key=lambda h: h['harmonic_index'], reverse=True)
+def sort_harmonics_amp(harmonics):
+    sorted_h = sorted(harmonics, key=lambda h: h['amplitude'], reverse=True)
     return sorted_h
 #sw
 freq, power, n, harmonics = analyze_fft(swvelocity)
-sorted = sort_harmonics_by_index(harmonics)
-print(sorted)
-
+sorted_amps = sort_harmonics_amp(harmonics)
+print(sorted_amps)
 
 # Plot the power spectrum (positive frequencies only)
 plt.figure(figsize=(10, 4))
