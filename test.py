@@ -138,14 +138,13 @@ def interpolate_nan(y):
 def analyze_fft(data, dt_hours=1, top_k=6):
     # Interpolate NaNs and prepare data
     y = interpolate_nan(data.copy())
-    dt_days = dt_hours / 24
-    n = len(y)
+    
+    #gets ftt
+    data_fft = fft(data)/data.size # Normalize it
+    freqs = fftfreq(data.size, 1/24) # hours per day
 
-    # Detrend and FFT
-    y_detrended = y - np.mean(y)
-    Y = fft(y_detrended)
-    freq = fftfreq(n, d=dt_days)
-    power = np.abs(Y)**2
+    power = np.abs(data_fft[1:data.size//2]**2) # Get that power
+    freq = freqs[1:data.size//2] # This is cycles-per-day.
 
     # Filter to only positive frequencies
     pos_mask = freq > 0
@@ -182,8 +181,14 @@ data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
         'Plasma Temperature|Temperature (K)': (time,swtemp),
         'Ion Number Density|Density (per cc)': (time,swdensity),
         'DST Index|DST (nT)': (time,dst)}
+
 fig, axes = plt.subplots(3,2, figsize = (12,12))
 # for loop to add data to each plot
+fig.suptitle('Power Spectrums')
+
+amps = []
+freqs = []
+
 for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     freq, power, n, harmonics = analyze_fft(i)
     sorted_amps = sort_harmonics_amp(harmonics)
@@ -204,15 +209,17 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     for i in range(5):
         # Find the index of the dominant frequency (maximum power) within the valid range
         dominant_idx = np.argmax(power)
+        amps.append(np.sqrt(power[dominant_idx]))
         # Extract the dominant frequency in cycles/day
         dominant_freq = freq[dominant_idx]
+        freqs.append(dominant_freq)
         # add to array
         dominant_frequencies.append(dominant_freq)
         # delete max power to find second dominant frequency
         power = np.delete(power, dominant_idx)  
 
     # Print the results
-    print(f'{title}:')
+    print(f'\n{title}:')
     for rank, freq in enumerate(dominant_frequencies, start=1):
         days = 1 / freq
         years = days / 365
@@ -222,21 +229,79 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %%
+#Natalie - please add in phase shift for harmonic
 from matplotlib.dates import num2date, date2num
 # correlates data to labels
-data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, 10),
-        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,50),
-        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,10),
-        'Plasma Temperature|Temperature (K)': (time,swtemp,0.5),
-        'Ion Number Density|Density (per cc)': (time,swdensity,10),
-        'DST Index|DST (nT)': (time,dst,20)}
-fig, axes = plt.subplots(3,2, figsize = (12,20))
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, amps[0]),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,amps[5]),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,amps[10]),
+        'Plasma Temperature|Temperature (K)': (time,swtemp,amps[15]),
+        'Ion Number Density|Density (per cc)': (time,swdensity,0),
+        'DST Index|DST (nT)': (time,dst,amps[25])}
+fig, axes = plt.subplots(3,2, figsize = (12,15))
+fig.suptitle('Harmonic with 11.0082 Year Cycle')
 # for loop to add data to each plot
 for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
     #add data to the plot
-    t = np.arange(0, x.size,1)
+    y = interpolate_nan(y)
+    t = date2num(x)
     ax.plot(x,y)
-    ax.plot(x, amp*np.cos((0.0002/24)*t)+np.mean(y))
+    harm = amp*np.cos((2*np.pi*freqs[0])*t)+np.average(y)
+    ax.plot(t, harm)
+    # adds proper titles and labels
+    title, space, ytext = label.partition('|')
+    ax.set_title(title)   
+    ax.set_xlabel(r'Date $(year)$')
+    ax.set_ylabel(ytext)
+fig.tight_layout()
+
+# %%
+#Natalie - please add in phase shift for harmonic
+from matplotlib.dates import num2date, date2num
+# correlates data to labels
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, amps[3]),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,amps[7]),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,amps[14]),
+        'Plasma Temperature|Temperature (K)': (time,swtemp,amps[17]),
+        'Ion Number Density|Density (per cc)': (time,swdensity,0),
+        'DST Index|DST (nT)': (time,dst,amps[28])}
+fig, axes = plt.subplots(3,2, figsize = (12,15))
+fig.suptitle('Harmonic with 5.5041 Year Cycle')
+# for loop to add data to each plot
+for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
+    #add data to the plot
+    y = interpolate_nan(y)
+    t = date2num(x)
+    ax.plot(t,y)
+    harm = amp*np.cos((2*np.pi*freqs[3])*t)+np.average(y)
+    ax.plot(t, harm)
+    # adds proper titles and labels
+    title, space, ytext = label.partition('|')
+    ax.set_title(title)   
+    ax.set_xlabel(r'Date $(year)$')
+    ax.set_ylabel(ytext)
+fig.tight_layout()
+
+# %%
+#Natalie - please add in phase shift for harmonic
+from matplotlib.dates import num2date, date2num
+# correlates data to labels
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, amps[3]),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,amps[7]),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,amps[14]),
+        'Plasma Temperature|Temperature (K)': (time,swtemp,amps[17]),
+        'Ion Number Density|Density (per cc)': (time,swdensity,amps[0]),
+        'DST Index|DST (nT)': (time,dst,amps[28])}
+fig, axes = plt.subplots(3,2, figsize = (12,15))
+fig.suptitle('Harmonic with 9 Day Cycle')
+# for loop to add data to each plot
+for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
+    #add data to the plot
+    y = interpolate_nan(y)
+    t = date2num(x)
+    ax.plot(t,y)
+    harm = amp*np.cos((2*np.pi*freqs[3])*t)+np.average(y)
+    ax.plot(t, harm)
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
@@ -245,6 +310,8 @@ for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %% [markdown]
+<<<<<<< HEAD
+=======
 # ### Question 1
 # Write a function to read the *.csv files using numpy.genfromtxt. Leverage the example above to ensure success.
 #
@@ -256,6 +323,7 @@ fig.tight_layout()
 
 
 # %% [markdown]
+>>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
 # ## Conclusions
 # Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
 # ## References
