@@ -57,12 +57,12 @@ tconvert = lambda x: dt.datetime.strptime(str(x), '%Y-%m-%dT%H:%M:%S.%fZ')
 data = np.genfromtxt('OMNI20032024.csv', names=True, delimiter=',', skip_header=94, encoding='utf-8',converters={0:tconvert}, dtype=None)
 
 time = data['TIME_AT_CENTER_OF_HOUR_yyyymmddThhmmsssssZ']
-swavgB = data['1AU_IP_MAG_AVG_B_nT']
-swvelocity = data['1AU_IP_PLASMA_SPEED_Kms']
-swpressure = data['1AU_IP_FLOW_PRESSURE_nPa']
-swtemp = data ['1AU_IP_PLASMA_TEMP_Deg_K']
-swdensity = data['1AU_IP_N_ION_Per_cc']
-dst = data['1H_DST_nT']
+swavgB = np.array(data['1AU_IP_MAG_AVG_B_nT'], dtype = float)
+swvelocity = np.array(data['1AU_IP_PLASMA_SPEED_Kms'], dtype = float)
+swpressure = np.array(data['1AU_IP_FLOW_PRESSURE_nPa'], dtype = float)
+swtemp = np.array(data ['1AU_IP_PLASMA_TEMP_Deg_K'], dtype = float)
+swdensity = np.array(data['1AU_IP_N_ION_Per_cc'], dtype = float)
+dst = np.array(data['1H_DST_nT'], dtype = float)
 
 # %%
 # values that need to be filtered due to null data points
@@ -172,50 +172,77 @@ def analyze_fft(data, dt_hours=1, top_k=6):
 def sort_harmonics_amp(harmonics):
     sorted_h = sorted(harmonics, key=lambda h: h['amplitude'], reverse=True)
     return sorted_h
-#sw
-freq, power, n, harmonics = analyze_fft(swvelocity)
-sorted_amps = sort_harmonics_amp(harmonics)
-print(sorted_amps)
-
-# Plot the power spectrum (positive frequencies only)
-plt.figure(figsize=(10, 4))
-plt.plot(freq[:n//2], power[:n//2])            # Plot only positive frequencies
-plt.title("Power Spectrum of Solar Wind Velocity")
-plt.xlabel("Frequency (cycles per day)")
-plt.ylabel("Power")
-plt.xlim(0, 0.4)                                # Focus on 0–0.4 cycles/day (~2.5 days and longer)
-plt.grid()
-plt.show()
-
-# Define frequency range of interest: 0.01 to 0.2 cycles/day (~5 to 100 days)
-#valid_range = (freq > 0.01) & (freq < 0.2)
-
-# Find the index of the dominant frequency (maximum power) within the valid range
-dominant_idx = np.argmax(power)
-# Extract the dominant frequency in cycles/day
-fundamental_freq = freq[dominant_idx]
-
-# Print the dominant frequency and corresponding period (in days)
-print(f"Fundamental frequency: {fundamental_freq:.4f} cycles per day (~{1/fundamental_freq:.1f} days)")
-print(swvelocity.size/24)
 
 
-amp1 = np.argmax(power) +1
-#shows the amplitude and frequency and period value for the largest amplitude
-print(f'Largest amplitude {power[np.argmax(power)]} and corresponding frequency {freq[np.argmax(power)]}')
-print(f'and period {1/freq[np.argmax(power)]}')
-print(f'{amp1}th harmonic is associated with the largest amplitude') 
-# prints harmonic associated with largest amplitude
-# finds the second amplitude with argmax and stores the corresponding harmonic and stores it in amp2
-# plus 1 to account for index starting at 0 for arrays
-# removes amp1 with delete from the dataset to find the second largest
-amp2 = np.argmax(np.delete(power, amp1-1)) + 1
-#shows the amplitude and frequency and period value for the second largest amplitude
-print(f'Second largest amplitude {power[np.argmax(np.delete(power, amp1-1))]}') 
-print(f'and corresponding frequency {freq[np.argmax(np.delete(power, amp1-1))]}')
-print(f'and period {1/np.abs(freq[np.argmax(np.delete(power, amp1-1))])/365}')
-print(f'{amp2}st harmonic is associated with the second largest amplitude') 
-# prints harmonic associated with second largest amplitude
+# %%
+#correlates data with labels
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
+        'Plasma Temperature|Temperature (K)': (time,swtemp),
+        'Ion Number Density|Density (per cc)': (time,swdensity),
+        'DST Index|DST (nT)': (time,dst)}
+fig, axes = plt.subplots(3,2, figsize = (12,12))
+# for loop to add data to each plot
+for ax, (label, (x, i)) in zip(axes.flat, data.items()):
+    freq, power, n, harmonics = analyze_fft(i)
+    sorted_amps = sort_harmonics_amp(harmonics)
+    #add data to the plot
+    ax.plot(freq[:n//2], power[:n//2])
+    # adds proper titles and labels
+    title, space, unit = label.partition('|')
+    ax.set_title(f'Power Spectrum of {title}')   
+    ax.set_xlabel("Frequency (cycles per day)")
+    ax.set_ylabel(f"Power ({unit}^2)")
+    ax.set_xlim(-0.01,2)
+
+    freq = abs(freq)
+
+    dominant_frequencies = []
+
+    # Loop to find the top 5 dominant frequencies
+    for i in range(5):
+        # Find the index of the dominant frequency (maximum power) within the valid range
+        dominant_idx = np.argmax(power)
+        # Extract the dominant frequency in cycles/day
+        dominant_freq = freq[dominant_idx]
+        # add to array
+        dominant_frequencies.append(dominant_freq)
+        # delete max power to find second dominant frequency
+        power = np.delete(power, dominant_idx)  
+
+    # Print the results
+    print(f'{title}:')
+    for rank, freq in enumerate(dominant_frequencies, start=1):
+        days = 1 / freq
+        years = days / 365
+        print(f'\t {rank} Dominant frequency: {freq:.4f} cycles per day (~{days:.2f} days or ~{years:.4f} years)')
+
+
+fig.tight_layout()
+
+# %%
+from matplotlib.dates import num2date, date2num
+# correlates data to labels
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, 10),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,50),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,10),
+        'Plasma Temperature|Temperature (K)': (time,swtemp,0.5),
+        'Ion Number Density|Density (per cc)': (time,swdensity,10),
+        'DST Index|DST (nT)': (time,dst,20)}
+fig, axes = plt.subplots(3,2, figsize = (12,20))
+# for loop to add data to each plot
+for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
+    #add data to the plot
+    t = np.arange(0, x.size,1)
+    ax.plot(x,y)
+    ax.plot(x, amp*np.cos((0.0002/24)*t)+np.mean(y))
+    # adds proper titles and labels
+    title, space, ytext = label.partition('|')
+    ax.set_title(title)   
+    ax.set_xlabel(r'Date $(year)$')
+    ax.set_ylabel(ytext)
+fig.tight_layout()
 
 # %% [markdown]
 # ### Question 1
