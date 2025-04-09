@@ -54,7 +54,7 @@ import datetime as dt
 # time converter to datetime object for the OMNI data
 tconvert = lambda x: dt.datetime.strptime(str(x), '%Y-%m-%dT%H:%M:%S.%fZ')
 # reads the OMNI data into arrays
-data = np.genfromtxt('OMNI20032024.csv', names=True, delimiter=',', skip_header=94, encoding='utf-8',converters={0:tconvert}, dtype=None)
+data = np.genfromtxt('OMNI2_20002024.csv', names=True, delimiter=',', skip_header=97, encoding='utf-8',converters={0:tconvert}, dtype=None)
 
 time = data['TIME_AT_CENTER_OF_HOUR_yyyymmddThhmmsssssZ']
 swavgB = np.array(data['1AU_IP_MAG_AVG_B_nT'], dtype = float)
@@ -138,13 +138,15 @@ def interpolate_nan(y):
 def analyze_fft(data, dt_hours=1, top_k=6):
     # Interpolate NaNs and prepare data
     y = interpolate_nan(data.copy())
+    dt_days = dt_hours / 24
+    n = len(y)
     
     #gets ftt
-    data_fft = fft(data)/data.size # Normalize it
-    freqs = fftfreq(data.size, 1/24) # hours per day
+    data_fft = fft(y)/y.size # Normalize it
+    freqs = fftfreq(y.size, 1/24) # hours per day
 
-    power = np.abs(data_fft[1:data.size//2]**2) # Get that power
-    freq = freqs[1:data.size//2] # This is cycles-per-day.
+    power = np.abs(data_fft[1:y.size//2]**2) # Get that power
+    freq = freqs[1:y.size//2] # This is cycles-per-day.
 
     # Filter to only positive frequencies
     pos_mask = freq > 0
@@ -186,8 +188,8 @@ fig, axes = plt.subplots(3,2, figsize = (12,12))
 # for loop to add data to each plot
 fig.suptitle('Power Spectrums')
 
-amps = []
-freqs = []
+dom_amps = []
+dom_freqs = []
 
 for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     freq, power, n, harmonics = analyze_fft(i)
@@ -206,13 +208,13 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     dominant_frequencies = []
 
     # Loop to find the top 5 dominant frequencies
-    for i in range(5):
+    for i in range(10):
         # Find the index of the dominant frequency (maximum power) within the valid range
         dominant_idx = np.argmax(power)
-        amps.append(np.sqrt(power[dominant_idx]))
+        dom_amps.append(np.sqrt(power[dominant_idx]))
         # Extract the dominant frequency in cycles/day
         dominant_freq = freq[dominant_idx]
-        freqs.append(dominant_freq)
+        dom_freqs.append(dominant_freq)
         # add to array
         dominant_frequencies.append(dominant_freq)
         # delete max power to find second dominant frequency
@@ -229,25 +231,52 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %%
-#Natalie - please add in phase shift for harmonic
-from matplotlib.dates import num2date, date2num
+# original data arrays
+arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp, dst]
+# new arrays for the filtered data
+swavgB_filt = np.empty(swavgB.size)
+swdensity_filt = np.empty(swdensity.size)
+swvelocity_filt = np.empty(swvelocity.size)
+swpressure_filt = np.empty(swpressure.size)
+swtemp_filt = np.empty(swtemp.size)
+dst_filt = np.empty(dst.size)
+
+newarray = [swavgB_filt, swdensity_filt, swvelocity_filt, swpressure_filt, swtemp_filt, dst_filt]
+# use ifft to filter out dominant frequencies found above
+for i in range(1):
+    x = interpolate_nan(arrays[i])
+    N = x.size
+    amps = fft(x)
+    freqs = fftfreq(N, 1/24)
+
+    mask1 = (freqs == dom_freqs[0])  
+    mask2 = (freqs == dom_freqs[3])  
+    mask3 = (freqs == dom_freqs[3])  
+    mask4 = (freqs == dom_freqs[8]) 
+    mask5 = (freqs == dom_freqs[25])
+
+    amps_filt = amps.copy()
+    amps_filt[mask1]=0
+    amps_filt[mask2]=0
+    amps_filt[mask3]=0
+    amps_filt[mask4]=0
+    amps_filt[mask5]=0
+    newarray[i] = ifft(amps_filt)
+    plt.plot(newarray[i])
+
+# %%
 # correlates data to labels
-data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, amps[0]),
-        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,amps[5]),
-        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,amps[10]),
-        'Plasma Temperature|Temperature (K)': (time,swtemp,amps[15]),
-        'Ion Number Density|Density (per cc)': (time,swdensity,0),
-        'DST Index|DST (nT)': (time,dst,amps[25])}
-fig, axes = plt.subplots(3,2, figsize = (12,15))
-fig.suptitle('Harmonic with 11.0082 Year Cycle')
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
+        'Plasma Temperature|Temperature (K)': (time,swtemp),
+        'Ion Number Density|Density (per cc)': (time,swdensity),
+        'DST Index|DST (nT)': (time,dst)}
+fig, axes = plt.subplots(6,1, figsize = (12,20))
 # for loop to add data to each plot
-for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
+for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     #add data to the plot
-    y = interpolate_nan(y)
-    t = date2num(x)
     ax.plot(x,y)
-    harm = amp*np.cos((2*np.pi*freqs[0])*t)+np.average(y)
-    ax.plot(t, harm)
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
@@ -256,75 +285,105 @@ for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %%
-#Natalie - please add in phase shift for harmonic
-from matplotlib.dates import num2date, date2num
-# correlates data to labels
-data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, amps[3]),
-        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,amps[7]),
-        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,amps[14]),
-        'Plasma Temperature|Temperature (K)': (time,swtemp,amps[17]),
-        'Ion Number Density|Density (per cc)': (time,swdensity,0),
-        'DST Index|DST (nT)': (time,dst,amps[28])}
-fig, axes = plt.subplots(3,2, figsize = (12,15))
-fig.suptitle('Harmonic with 5.5041 Year Cycle')
-# for loop to add data to each plot
-for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
-    #add data to the plot
-    y = interpolate_nan(y)
-    t = date2num(x)
-    ax.plot(t,y)
-    harm = amp*np.cos((2*np.pi*freqs[3])*t)+np.average(y)
-    ax.plot(t, harm)
-    # adds proper titles and labels
-    title, space, ytext = label.partition('|')
-    ax.set_title(title)   
-    ax.set_xlabel(r'Date $(year)$')
-    ax.set_ylabel(ytext)
-fig.tight_layout()
-
-# %%
-#Natalie - please add in phase shift for harmonic
-from matplotlib.dates import num2date, date2num
-# correlates data to labels
-data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB, amps[3]),
-        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,amps[7]),
-        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,amps[14]),
-        'Plasma Temperature|Temperature (K)': (time,swtemp,amps[17]),
-        'Ion Number Density|Density (per cc)': (time,swdensity,amps[0]),
-        'DST Index|DST (nT)': (time,dst,amps[28])}
-fig, axes = plt.subplots(3,2, figsize = (12,15))
-fig.suptitle('Harmonic with 9 Day Cycle')
-# for loop to add data to each plot
-for ax, (label, (x, y, amp)) in zip(axes.flat, data.items()):
-    #add data to the plot
-    y = interpolate_nan(y)
-    t = date2num(x)
-    ax.plot(t,y)
-    harm = amp*np.cos((2*np.pi*freqs[3])*t)+np.average(y)
-    ax.plot(t, harm)
-    # adds proper titles and labels
-    title, space, ytext = label.partition('|')
-    ax.set_title(title)   
-    ax.set_xlabel(r'Date $(year)$')
-    ax.set_ylabel(ytext)
-fig.tight_layout()
-
-# %% [markdown]
-<<<<<<< HEAD
-=======
-# ### Question 1
-# Write a function to read the *.csv files using numpy.genfromtxt. Leverage the example above to ensure success.
-#
+from scipy.stats import chi2_contingency
 
 
-# %% [markdown]
-# ### Question 3
-# Description of what you need to do and interpretation of results (if applicable)
 
-
-# %% [markdown]
->>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
-# ## Conclusions
-# Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
-# ## References
-# List any references used
+def binary_event_analysis(list1, list2):
+    """
+    Analyzes two binary event lists.
+    
+    Parameters:
+    - list1, list2: Lists of binary values of equal length.
+    
+    This function computes:
+      - A contingency table for the two lists.
+      - The phi coefficient (correlation).
+      - The odds ratio.
+      - The hit rate, false alarm rate, proportion correct, and false alarm ratio.
+      - The Heidke Skill Score (HSS) for forecast skill.
+      - Chi-square test for independence.
+    """
+    # Inputs are of equal length
+    if len(list1) != len(list2):
+        raise ValueError("Both lists must have the same length.")
+    
+    # Construct the contingency table elements
+    # a: True Positives, b: False Alarms, c: Misses, d: True Negatives.
+    a = sum(1 for i, j in zip(list1, list2) if i == 1 and j == 1)
+    b = sum(1 for i, j in zip(list1, list2) if i == 1 and j == 0)
+    c = sum(1 for i, j in zip(list1, list2) if i == 0 and j == 1)
+    d = sum(1 for i, j in zip(list1, list2) if i == 0 and j == 0)
+    
+    contingency_table = np.array([[a, b],
+                                  [c, d]])
+    
+    # Total number of observations
+    N = a + b + c + d
+    
+    # Print contingency table
+    print("Contingency Table:")
+    print("                list2=1   list2=0")
+    print(f"list1=1        {a:<9} {b}")
+    print(f"list1=0        {c:<9} {d}\n")
+    
+    # Compute phi coefficient
+    numerator = a * d - b * c
+    denominator = np.sqrt((a + b) * (c + d) * (a + c) * (b + d))
+    phi = numerator / denominator if denominator != 0 else np.nan
+    print(f"Phi coefficient (correlation): {phi:.4f}")
+    
+    # Calculate Odds Ratio
+    if b * c == 0:
+        odds_ratio = np.inf if a * d > 0 else np.nan
+        print("Odds Ratio: Division by zero occurred (one of b or c is 0); odds ratio set to infinity if numerator > 0.")
+    else:
+        odds_ratio = (a * d) / (b * c)
+        print(f"Odds Ratio: {odds_ratio:.4f}")
+    
+    # Calculate additional performance metrics
+    # Hit Rate: Proportion of actual positive events (list2) that were correctly forecast
+    hit_rate = a / (a + c) if (a + c) != 0 else np.nan
+    # False Alarm Rate: Proportion of actual negative events (list2) that were falsely forecast as positive.
+    false_alarm_rate = b / (b + d) if (b + d) != 0 else np.nan
+    # Proportion Correct: Overall accuracy
+    proportion_correct = (a + d) / N if N != 0 else np.nan
+    # False Alarm Ratio: Proportion of forecasted positives that were false alarms
+    false_alarm_ratio = b / (a + b) if (a + b) != 0 else np.nan
+    
+    print(f"\nHit Rate (True Positive Rate): {hit_rate:.4f}")
+    print(f"False Alarm Rate: {false_alarm_rate:.4f}")
+    print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
+    print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
+    
+    # Calculate Heidke Skill Score (HSS)
+    # Expected accuracy by chance
+    Pe = ((a + b) * (a + c) + (c + d) * (b + d)) / (N * N) if N != 0 else np.nan
+    # HSS: (observed accuracy - expected accuracy) / (1 - expected accuracy)
+    HSS = (proportion_correct - Pe) / (1 - Pe) if (1 - Pe) != 0 else np.nan
+    print(f"Heidke Skill Score: {HSS:.4f}")
+    
+    # Chi-Square test for independence
+    chi2, p, dof, expected = chi2_contingency(contingency_table)
+    print("\nChi-Square Test for Independence:")
+    print(f"Chi2 statistic: {chi2:.4f}")
+    print(f"Degrees of Freedom: {dof}")
+    print(f"P-value: {p:.4f}")
+    print("Expected frequencies:")
+    print(expected)
+    
+    # Return all results as a dictionary
+    return {
+        'contingency_table': contingency_table,
+        'phi_coefficient': phi,
+        'odds_ratio': odds_ratio,
+        'hit_rate': hit_rate,
+        'false_alarm_rate': false_alarm_rate,
+        'proportion_correct': proportion_correct,
+        'false_alarm_ratio': false_alarm_ratio,
+        'heidke_skill_score': HSS,
+        'chi2_statistic': chi2,
+        'chi2_dof': dof,
+        'chi2_p_value': p,
+        'expected_frequencies': expected
+    }
