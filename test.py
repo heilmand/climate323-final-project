@@ -320,7 +320,109 @@ fig.tight_layout()
 # %% [markdown]
 # ### Question 3
 # Description of what you need to do and interpretation of results (if applicable)
+### here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
+import numpy as np
+from scipy.stats import chi2_contingency
 
+def binary_event_analysis(list1, list2):
+    """
+    Analyzes two binary event lists.
+    
+    Parameters:
+    - list1, list2: Lists of binary values of equal length.
+    
+    This function computes:
+      - A contingency table for the two lists.
+      - The phi coefficient (correlation).
+      - The odds ratio.
+      - The hit rate, false alarm rate, proportion correct, and false alarm ratio.
+      - The Heidke Skill Score (HSS) for forecast skill.
+      - Chi-square test for independence.
+    """
+    # Inputs are of equal length
+    if len(list1) != len(list2):
+        raise ValueError("Both lists must have the same length.")
+    
+    # Construct the contingency table elements
+    # a: True Positives, b: False Alarms, c: Misses, d: True Negatives.
+    a = sum(1 for i, j in zip(list1, list2) if i == 1 and j == 1)
+    b = sum(1 for i, j in zip(list1, list2) if i == 1 and j == 0)
+    c = sum(1 for i, j in zip(list1, list2) if i == 0 and j == 1)
+    d = sum(1 for i, j in zip(list1, list2) if i == 0 and j == 0)
+    
+    contingency_table = np.array([[a, b],
+                                  [c, d]])
+    
+    # Total number of observations
+    N = a + b + c + d
+    
+    # Print contingency table
+    print("Contingency Table:")
+    print("                list2=1   list2=0")
+    print(f"list1=1        {a:<9} {b}")
+    print(f"list1=0        {c:<9} {d}\n")
+    
+    # Compute phi coefficient
+    numerator = a * d - b * c
+    denominator = np.sqrt((a + b) * (c + d) * (a + c) * (b + d))
+    phi = numerator / denominator if denominator != 0 else np.nan
+    print(f"Phi coefficient (correlation): {phi:.4f}")
+    
+    # Calculate Odds Ratio
+    if b * c == 0:
+        odds_ratio = np.inf if a * d > 0 else np.nan
+        print("Odds Ratio: Division by zero occurred (one of b or c is 0); odds ratio set to infinity if numerator > 0.")
+    else:
+        odds_ratio = (a * d) / (b * c)
+        print(f"Odds Ratio: {odds_ratio:.4f}")
+    
+    # Calculate additional performance metrics
+    # Hit Rate: Proportion of actual positive events (list2) that were correctly forecast
+    hit_rate = a / (a + c) if (a + c) != 0 else np.nan
+    # False Alarm Rate: Proportion of actual negative events (list2) that were falsely forecast as positive.
+    false_alarm_rate = b / (b + d) if (b + d) != 0 else np.nan
+    # Proportion Correct: Overall accuracy
+    proportion_correct = (a + d) / N if N != 0 else np.nan
+    # False Alarm Ratio: Proportion of forecasted positives that were false alarms
+    false_alarm_ratio = b / (a + b) if (a + b) != 0 else np.nan
+    
+    print(f"\nHit Rate (True Positive Rate): {hit_rate:.4f}")
+    print(f"False Alarm Rate: {false_alarm_rate:.4f}")
+    print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
+    print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
+    
+    # Calculate Heidke Skill Score (HSS)
+    # Expected accuracy by chance
+    Pe = ((a + b) * (a + c) + (c + d) * (b + d)) / (N * N) if N != 0 else np.nan
+    # HSS: (observed accuracy - expected accuracy) / (1 - expected accuracy)
+    HSS = (proportion_correct - Pe) / (1 - Pe) if (1 - Pe) != 0 else np.nan
+    print(f"Heidke Skill Score: {HSS:.4f}")
+    
+    # Chi-Square test for independence
+    chi2, p, dof, expected = chi2_contingency(contingency_table)
+    print("\nChi-Square Test for Independence:")
+    print(f"Chi2 statistic: {chi2:.4f}")
+    print(f"Degrees of Freedom: {dof}")
+    print(f"P-value: {p:.4f}")
+    print("Expected frequencies:")
+    print(expected)
+    
+    # Return all results as a dictionary
+    return {
+        'contingency_table': contingency_table,
+        'phi_coefficient': phi,
+        'odds_ratio': odds_ratio,
+        'hit_rate': hit_rate,
+        'false_alarm_rate': false_alarm_rate,
+        'proportion_correct': proportion_correct,
+        'false_alarm_ratio': false_alarm_ratio,
+        'heidke_skill_score': HSS,
+        'chi2_statistic': chi2,
+        'chi2_dof': dof,
+        'chi2_p_value': p,
+        'expected_frequencies': expected
+    }
+    
 
 # %% [markdown]
 >>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
