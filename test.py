@@ -288,6 +288,15 @@ fig.tight_layout()
 from scipy.stats import chi2_contingency
 
 
+<<<<<<< HEAD
+=======
+# %% [markdown]
+# ### Question 3
+# Description of what you need to do and interpretation of results (if applicable)
+### here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
+import numpy as np
+from scipy.stats import chi2_contingency
+>>>>>>> 436bf6dc9cff70caf09da378cda133b67bd7572f
 
 def binary_event_analysis(list1, list2):
     """
@@ -387,3 +396,14 @@ def binary_event_analysis(list1, list2):
         'chi2_p_value': p,
         'expected_frequencies': expected
     }
+<<<<<<< HEAD
+=======
+    
+
+# %% [markdown]
+>>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
+# ## Conclusions
+# Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
+# ## References
+# List any references used
+>>>>>>> 436bf6dc9cff70caf09da378cda133b67bd7572f
