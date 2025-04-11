@@ -68,11 +68,11 @@ dst = np.array(data['1H_DST_nT'], dtype = float)
 # values that need to be filtered due to null data points
 arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
 # maxs of the legitimate from OMNI
-filters = [99, 999, 99999, 99, 9999999]
+filters = [99, 999, 9999, 99, 9999999]
 # filters out non data points to be null
 for array, threshold in zip(arrays, filters):
     for index, value in enumerate(array):
-        if value == threshold:
+        if value >= threshold:
             array[index] = np.nan
 
 # %%
@@ -243,9 +243,9 @@ swpressure_filt = np.empty(swpressure.size)
 swtemp_filt = np.empty(swtemp.size)
 dst_filt = np.empty(dst.size)
 
-freq_range = (0.0002190100744634253/12)
+freq_ranged = 5/365
+freq_rangey = 62/365
 
-print(freq_range)
 print(dom_freqs[0])
 print(dom_freqs[12])
 print(dom_freqs[13])
@@ -258,9 +258,9 @@ for i in range(6):
     amps = fft(x)
     freqs = fftfreq(N, 1/24)
 
-    mask1 = (np.abs(freqs) < dom_freqs[0]+freq_range) & (np.abs(freqs) > dom_freqs[0]-freq_range)  
-    mask2 = (np.abs(freqs) < dom_freqs[12]+freq_range) & (np.abs(freqs) > dom_freqs[12]-freq_range)  
-    mask3 = (np.abs(freqs) < dom_freqs[13]+freq_range) & (np.abs(freqs) > dom_freqs[13]-freq_range) 
+    mask1 = (np.abs(freqs) < dom_freqs[0]+freq_rangey) & (np.abs(freqs) > dom_freqs[0]-freq_rangey) & (freqs != 0)
+    mask2 = (np.abs(freqs) < dom_freqs[12]+freq_ranged) & (np.abs(freqs) > dom_freqs[12]-freq_ranged) & (freqs != 0)  
+    mask3 = (np.abs(freqs) < dom_freqs[13]+freq_ranged) & (np.abs(freqs) > dom_freqs[13]-freq_ranged) & (freqs != 0) 
 
     amps_filt = amps.copy()
     amps_filt[mask1]=0
@@ -298,19 +298,19 @@ for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %%
-swEvent = np.empty(swavgB.size)
+swEvent = np.empty(swavgB_filt.size)
 
-for i in range(swavgB.size):
+for i in range(swavgB_filt.size):
     c = 0
-    if swavgB_filt[i] > 20:
+    if swavgB_filt[i] > 15:
         c = c+1
     if swdensity_filt[i] > 15:
         c = c+1
-    if swpressure_filt[i] > 8:
+    if swpressure_filt[i] > 10:
         c = c+1
-    if swtemp_filt[i] > 1*10**6:
+    if swtemp_filt[i] > 7.5*10**5:
         c = c+1
-    if swvelocity_filt[i] > 650:
+    if swvelocity_filt[i] > 550:
         c = c+1
     if c >=3:
         swEvent[i] = True
@@ -318,21 +318,14 @@ for i in range(swavgB.size):
         swEvent[i] = False
 
 
-
-        #Here we will create an array to hold our true
-binary_event = np.zeros(math.ceil(len(time) / 120))
-window_size = timedelta(days=5)
-start, stop = time[0], time[-1]
-idx = 0
-while start + window_size < stop:
-    end = start + window_size
-    locations = (time >= start) & (time < end)
-    subset = dst[locations]
-    if(np.min(subset) < -70):
-        binary_event[idx] = True
-    start += window_size
-    idx += 1
-
+# %%
+fig, ax = plt.subplots(1,1)
+ax.plot(time, swEvent, color = '#bd1caa')
+# adds proper titles and labels
+ax.set_title('Event Identified from Solar Wind Data')   
+ax.set_xlabel(r'Date $(year)$')
+ax.set_ylabel('1 = Solar Event and 0 = No Event')
+print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
 
 # %%
 from scipy.stats import chi2_contingency
