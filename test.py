@@ -243,7 +243,7 @@ dst_filt = np.empty(dst.size)
 
 newarray = [swavgB_filt, swdensity_filt, swvelocity_filt, swpressure_filt, swtemp_filt, dst_filt]
 # use ifft to filter out dominant frequencies found above
-for i in range(1):
+for i in range(6):
     x = interpolate_nan(arrays[i])
     N = x.size
     amps = fft(x)
@@ -262,21 +262,28 @@ for i in range(1):
     amps_filt[mask4]=0
     amps_filt[mask5]=0
     newarray[i] = ifft(amps_filt)
-    plt.plot(newarray[i])
+
+swavgB_filt = newarray[0]
+swdensity_filt = newarray[1]
+swvelocity_filt = newarray[2]
+swpressure_filt = newarray[3]
+swtemp_filt = newarray[4]
+dst_filt = newarray[5]
 
 # %%
 # correlates data to labels
-data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
-        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity),
-        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure),
-        'Plasma Temperature|Temperature (K)': (time,swtemp),
-        'Ion Number Density|Density (per cc)': (time,swdensity),
-        'DST Index|DST (nT)': (time,dst)}
+data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB,swavgB_filt),
+        'Solar Wind Velocity|Velocity (km/s)': (time,swvelocity,swvelocity_filt),
+        'Plasma Flow Pressure|Pressure (nPa)': (time,swpressure,swpressure_filt),
+        'Plasma Temperature|Temperature (K)': (time,swtemp,swtemp_filt),
+        'Ion Number Density|Density (per cc)': (time,swdensity,swdensity_filt),
+        'DST Index|DST (nT)': (time,dst,dst_filt)}
 fig, axes = plt.subplots(6,1, figsize = (12,20))
 # for loop to add data to each plot
-for ax, (label, (x, y)) in zip(axes.flat, data.items()):
+for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
     #add data to the plot
-    ax.plot(x,y)
+    ax.plot(x,y, label = 'Original Data')
+    ax.plot(x, filt, label = 'Filter Data')
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
@@ -288,15 +295,6 @@ fig.tight_layout()
 from scipy.stats import chi2_contingency
 
 
-<<<<<<< HEAD
-=======
-# %% [markdown]
-# ### Question 3
-# Description of what you need to do and interpretation of results (if applicable)
-### here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
-import numpy as np
-from scipy.stats import chi2_contingency
->>>>>>> 436bf6dc9cff70caf09da378cda133b67bd7572f
 
 def binary_event_analysis(list1, list2):
     """
@@ -396,14 +394,3 @@ def binary_event_analysis(list1, list2):
         'chi2_p_value': p,
         'expected_frequencies': expected
     }
-<<<<<<< HEAD
-=======
-    
-
-# %% [markdown]
->>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
-# ## Conclusions
-# Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
-# ## References
-# List any references used
->>>>>>> 436bf6dc9cff70caf09da378cda133b67bd7572f
