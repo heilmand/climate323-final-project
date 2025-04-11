@@ -83,11 +83,11 @@ data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
         'Plasma Temperature|Temperature (K)': (time,swtemp),
         'Ion Number Density|Density (per cc)': (time,swdensity),
         'DST Index|DST (nT)': (time,dst)}
-fig, axes = plt.subplots(6,1, figsize = (12,20))
+fig, axes = plt.subplots(2,3, figsize = (15,8))
 # for loop to add data to each plot
 for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     #add data to the plot
-    ax.plot(x,y)
+    ax.plot(x,y, color = '#bd1caa')
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
@@ -103,20 +103,22 @@ fig.tight_layout()
 
 # %%
 # creates a new figure for plots
-fig, axes = plt.subplots(3,2, figsize = (12,12))
+fig, axes = plt.subplots(2,3, figsize = (15,8))
 fig.suptitle('April 2023 CME')
 # for loop to add data to each plot
 for ax, (label, (x, y)) in zip(axes.flat, data.items()):
     # add data to the plot
     # narrows graph to just time around the 4/23/2023 CME
     ax.set_xlim(dt.datetime(2023,4,22),dt.datetime(2023,4,27))
-    ax.plot(x,y)
+    ax.plot(x,y, color = '#bd1caa')
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
     ax.set_xlabel('Date')
     ax.set_ylabel(ytext)
+    ax.tick_params(axis='x', rotation=45)
 fig.tight_layout()
+
 
 # %% [markdown]
 # During a CME the magnetic field at 1 AU increases at the arrival of the CME and conitnues to increase before decreasing after the passing of the CME. The solar wind velocity also increases when the storm arrives before decreasing slightly again and remaining steady. There is a small peak in the solar wind pressure, density and temperature at the arrival of the CME before it decreases again. Lastly, the DST Index decreases to negative during the CME before recovering. This behavior matches the the structure of a CME. Typically a CME will have a shock associated with where the fast solar wind from the CME over takes the slow solar wind in front forming the shock. However, there does not have to be a shock associated with the CME. This causes an increase in solar wind speed when the shock and CME reach Lagrange point 1. Since the shock is at the beginning there is a bigger increase at the start of the CME before decreasing a little while the magnetic cloud of the CME passes. In the magnetic cloud of a CME there is a magnetic field as the name suggests. However the magnetic cloud mainly contains the magnetic cloud and nothing else. Therefore, the magnetic field should increase at the arrival of the shock and continue to increase and stay at a higher value during the passing of the magnetic cloud. However the solar wind parameter should increase at the arrival of the shock due to the compression of the solar wind but then drop during the passing of the magnetic cloud which is seen with the April 23rd storm of 2023. Lastly the DST measures the impact of the magnetic field on Earth surface with Earth's magnetic field therefore is showcases the opposite effect of Lagrange point 1 by decreasing due to the CME before recovering back to around 0 nT.
@@ -184,7 +186,7 @@ data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
         'Ion Number Density|Density (per cc)': (time,swdensity),
         'DST Index|DST (nT)': (time,dst)}
 
-fig, axes = plt.subplots(3,2, figsize = (12,12))
+fig, axes = plt.subplots(2,3, figsize = (15,8))
 # for loop to add data to each plot
 fig.suptitle('Power Spectrums')
 
@@ -195,20 +197,20 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     freq, power, n, harmonics = analyze_fft(i)
     sorted_amps = sort_harmonics_amp(harmonics)
     #add data to the plot
-    ax.plot(freq[:n//2], power[:n//2])
+    ax.plot(freq[:n//2], power[:n//2], color = '#bd1caa')
     # adds proper titles and labels
     title, space, unit = label.partition('|')
     ax.set_title(f'Power Spectrum of {title}')   
     ax.set_xlabel("Frequency (cycles per day)")
     ax.set_ylabel(f"Power ({unit}^2)")
-    ax.set_xlim(-0.01,2)
+    ax.set_xlim(-0.01,1.5)
 
     freq = abs(freq)
 
     dominant_frequencies = []
 
     # Loop to find the top 5 dominant frequencies
-    for i in range(10):
+    for i in range(5):
         # Find the index of the dominant frequency (maximum power) within the valid range
         dominant_idx = np.argmax(power)
         dom_amps.append(np.sqrt(power[dominant_idx]))
@@ -241,6 +243,13 @@ swpressure_filt = np.empty(swpressure.size)
 swtemp_filt = np.empty(swtemp.size)
 dst_filt = np.empty(dst.size)
 
+freq_range = (0.0002190100744634253/12)
+
+print(freq_range)
+print(dom_freqs[0])
+print(dom_freqs[12])
+print(dom_freqs[13])
+
 newarray = [swavgB_filt, swdensity_filt, swvelocity_filt, swpressure_filt, swtemp_filt, dst_filt]
 # use ifft to filter out dominant frequencies found above
 for i in range(6):
@@ -249,18 +258,14 @@ for i in range(6):
     amps = fft(x)
     freqs = fftfreq(N, 1/24)
 
-    mask1 = (freqs == dom_freqs[0])  
-    mask2 = (freqs == dom_freqs[3])  
-    mask3 = (freqs == dom_freqs[3])  
-    mask4 = (freqs == dom_freqs[8]) 
-    mask5 = (freqs == dom_freqs[25])
+    mask1 = (np.abs(freqs) < dom_freqs[0]+freq_range) & (np.abs(freqs) > dom_freqs[0]-freq_range)  
+    mask2 = (np.abs(freqs) < dom_freqs[12]+freq_range) & (np.abs(freqs) > dom_freqs[12]-freq_range)  
+    mask3 = (np.abs(freqs) < dom_freqs[13]+freq_range) & (np.abs(freqs) > dom_freqs[13]-freq_range) 
 
     amps_filt = amps.copy()
     amps_filt[mask1]=0
     amps_filt[mask2]=0
     amps_filt[mask3]=0
-    amps_filt[mask4]=0
-    amps_filt[mask5]=0
     newarray[i] = ifft(amps_filt)
 
 swavgB_filt = newarray[0]
@@ -278,17 +283,18 @@ data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB,swavg
         'Plasma Temperature|Temperature (K)': (time,swtemp,swtemp_filt),
         'Ion Number Density|Density (per cc)': (time,swdensity,swdensity_filt),
         'DST Index|DST (nT)': (time,dst,dst_filt)}
-fig, axes = plt.subplots(6,1, figsize = (12,20))
+fig, axes = plt.subplots(2,3, figsize = (15,8))
 # for loop to add data to each plot
 for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
     #add data to the plot
-    ax.plot(x,y, label = 'Original Data')
-    ax.plot(x, filt, label = 'Filter Data')
+    ax.plot(x,y, label = 'Original Data', color = '#3477eb',alpha = 0.75)
+    ax.plot(x, filt, label = 'Filter Data', color = '#bd1caa', alpha = 0.75)
     # adds proper titles and labels
     title, space, ytext = label.partition('|')
     ax.set_title(title)   
     ax.set_xlabel(r'Date $(year)$')
     ax.set_ylabel(ytext)
+    ax.legend()
 fig.tight_layout()
 
 # %%
