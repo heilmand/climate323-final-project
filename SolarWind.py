@@ -68,11 +68,11 @@ dst = np.array(data['1H_DST_nT'], dtype = float)
 # values that need to be filtered due to null data points
 arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
 # maxs of the legitimate from OMNI
-filters = [80, 100, 1200, 60, 1*10**7]
+filters = [99, 999, 99999, 99, 9999999]
 # filters out non data points to be null
 for array, threshold in zip(arrays, filters):
     for index, value in enumerate(array):
-        if value >= threshold:
+        if value == threshold:
             array[index] = np.nan
 
 # %%
@@ -103,7 +103,7 @@ fig.tight_layout()
 
 # %%
 # creates a new figure for plots
-fig, axes = plt.subplots(2,3, figsize = (15,8))
+fig, axes = plt.subplots(2,3, figsize = (15,10))
 fig.suptitle('April 2023 CME')
 # for loop to add data to each plot
 for ax, (label, (x, y)) in zip(axes.flat, data.items()):
@@ -296,6 +296,43 @@ for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
     ax.set_ylabel(ytext)
     ax.legend()
 fig.tight_layout()
+
+# %%
+swEvent = np.empty(swavgB.size)
+
+for i in range(swavgB.size):
+    c = 0
+    if swavgB_filt[i] > 20:
+        c = c+1
+    if swdensity_filt[i] > 15:
+        c = c+1
+    if swpressure_filt[i] > 8:
+        c = c+1
+    if swtemp_filt[i] > 1*10**6:
+        c = c+1
+    if swvelocity_filt[i] > 650:
+        c = c+1
+    if c >=3:
+        swEvent[i] = True
+    else:
+        swEvent[i] = False
+
+
+
+        #Here we will create an array to hold our true
+binary_event = np.zeros(math.ceil(len(time) / 120))
+window_size = timedelta(days=5)
+start, stop = time[0], time[-1]
+idx = 0
+while start + window_size < stop:
+    end = start + window_size
+    locations = (time >= start) & (time < end)
+    subset = dst[locations]
+    if(np.min(subset) < -70):
+        binary_event[idx] = True
+    start += window_size
+    idx += 1
+
 
 # %%
 from scipy.stats import chi2_contingency
