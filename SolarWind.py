@@ -297,6 +297,39 @@ for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
     ax.legend()
 fig.tight_layout()
 
+# %% [markdown]
+# ### Identifying DST Events 2.0
+
+# %%
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta
+import math as math
+
+# %%
+#every hour
+dst_events = np.zeros(len(dst))
+for i in range(len(dst)):
+    if(dst[i] < -70):
+        dst_events[i] = True
+
+# %%
+#Here we will create an array to hold our true
+dst_binary = np.zeros(math.ceil(len(time) / 120))
+window_size = timedelta(days=5)
+start, stop = time[0], time[-1]
+idx = 0
+while start + window_size < stop:
+    end = start + window_size
+    locations = (time >= start) & (time < end)
+    subset = dst[locations]
+    if(np.min(subset) < -70):
+        dst_binary[idx] = True
+    start += window_size
+    idx += 1
+
+# %% [markdown]
+# ### Identifying Events in the Filtered Solar Wind
+
 # %%
 swEvent = np.empty(swavgB_filt.size)
 
@@ -319,15 +352,88 @@ for i in range(swavgB_filt.size):
 
 
 # %%
-fig, ax = plt.subplots(1,1)
-ax.plot(time, swEvent, color = '#bd1caa')
-# adds proper titles and labels
-ax.set_title('Event Identified from Solar Wind Data')   
-ax.set_xlabel(r'Date $(year)$')
-ax.set_ylabel('1 = Solar Event and 0 = No Event')
-print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
+#here we will perform our binary event analysis on the Solar Wind data starting with the same cutoffs as chosen above
+#this time however, we will us a while loop and datetime objects to retrieve 5 day time intervals instead of
+#checking each data point individually
+#Here we will create an array to hold our true
+sw_binary = np.zeros(math.ceil(len(time) / 120))
+window_size = timedelta(days=5)
+start, stop = time[0], time[-1]
+idx = 0
+count = 0
+while start + window_size < stop:
+    end = start + window_size
+    locations = (time >= start) & (time < end)
+    subset = dst[locations]
+    c = 0
+    if np.max(swavgB_filt[locations]) > 15:
+        c = c+1
+    if np.max(swdensity_filt[locations]) > 15:
+        c = c+1
+    if np.max(swpressure_filt[locations]) > 10:
+        c = c+1
+    if np.max(swtemp_filt[locations]) > 7.5*10**5:
+        c = c+1
+    if np.max(swvelocity_filt[locations]) > 550:
+        c = c+1
+    if c >=3:
+        sw_binary[idx] = True
+    else:
+        sw_binary[idx] = False
+    start += window_size
+    idx += 1
 
 # %%
+#create figure and suplots to plot results
+fig, ([ax1, ax2], [ax3, ax4]) = plt.subplots(2,2, figsize=(10, 6))
+#dst events by hour
+ax1.plot(time, dst_events, color = '#bd1caa')
+#dst events 5 day window
+ax2.plot(dst_binary, color = '#bd1caa')
+#solar wind events by hour
+ax3.plot(time, swEvent, color = '#bd1caa')
+#solar wind events 5 day window
+ax4.plot(sw_binary, color = '#bd1caa')
+# adds proper titles and labels
+ax1.set_title('Events Identified from Hourly DST Data')   
+ax1.set_xlabel(r'Date $(year)$')
+ax1.set_ylabel('1 = Solar Event and 0 = No Event')
+
+ax2.set_title('Events Identified from DST Data, 5 day window')   
+ax2.set_xlabel('5 day window')
+ax2.set_ylabel('1 = Solar Event and 0 = No Event')
+
+ax3.set_title('Events Identified from Hourly Solar Wind Data')   
+ax3.set_xlabel(r'Date $(year)$')
+ax3.set_ylabel('1 = Solar Event and 0 = No Event')
+
+ax4.set_title('Events Identified from Solar Wind Data, 5 day window')   
+ax4.set_xlabel('5 day window')
+ax4.set_ylabel('1 = Solar Event and 0 = No Event')
+print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
+
+fig.tight_layout()
+
+# %%
+=======
+# %% [markdown]
+# <<<<<<< HEAD
+# =======
+# ### Question 1
+# Write a function to read the *.csv files using numpy.genfromtxt. Leverage the example above to ensure success.
+#
+
+
+# %%
+### Question 3
+Description of what you need to do and interpretation of results (if applicable)
+## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
+
+# %%
+### Question 3
+#Description of what you need to do and interpretation of results (if applicable)
+## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
+import numpy as np
 from scipy.stats import chi2_contingency
 
 
@@ -430,3 +536,26 @@ def binary_event_analysis(list1, list2):
         'chi2_p_value': p,
         'expected_frequencies': expected
     }
+
+
+# %%
+#try out the binary analysis function, natalie please feel free to fix this part up and do it properly later!
+binary_event_analysis(dst_binary, sw_binary)
+print('\n yay!  we have some stats! *high five*')
+
+# %% [markdown]
+# >>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
+# ## Conclusions
+# Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
+# ## References
+# List any references used
+# >>>>>>> Stashed changes:test.py
+
+# %% [markdown]
+#
+
+# %% [markdown]
+#
+
+# %% [markdown]
+#
