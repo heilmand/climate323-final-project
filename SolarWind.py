@@ -507,8 +507,8 @@ def binary_event_analysis(list1, list2):
     print(f"False Alarm Rate: {false_alarm_rate:.4f}")
     print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
     print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
-    print(f"percision: {Precision}")
-    print(f"recall {Recall}")
+    print(f"Precision: {Precision}")
+    print(f"Recall: {Recall}")
 
     # Calculate Heidke Skill Score (HSS)
     # Expected accuracy by chance
