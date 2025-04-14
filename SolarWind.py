@@ -434,7 +434,8 @@ Description of what you need to do and interpretation of results (if applicable)
 #Description of what you need to do and interpretation of results (if applicable)
 ## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
 import numpy as np
-from scipy.stats import chi2_contingency
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 
@@ -469,7 +470,6 @@ def binary_event_analysis(list1, list2):
     
     # Total number of observations
     N = a + b + c + d
-    
     # Print contingency table
     print("Contingency Table:")
     print("                list2=1   list2=0")
@@ -504,7 +504,7 @@ def binary_event_analysis(list1, list2):
     print(f"False Alarm Rate: {false_alarm_rate:.4f}")
     print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
     print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
-    
+
     # Calculate Heidke Skill Score (HSS)
     # Expected accuracy by chance
     Pe = ((a + b) * (a + c) + (c + d) * (b + d)) / (N * N) if N != 0 else np.nan
@@ -512,15 +512,29 @@ def binary_event_analysis(list1, list2):
     HSS = (proportion_correct - Pe) / (1 - Pe) if (1 - Pe) != 0 else np.nan
     print(f"Heidke Skill Score: {HSS:.4f}")
     
-    # Chi-Square test for independence
-    chi2, p, dof, expected = chi2_contingency(contingency_table)
-    print("\nChi-Square Test for Independence:")
-    print(f"Chi2 statistic: {chi2:.4f}")
-    print(f"Degrees of Freedom: {dof}")
-    print(f"P-value: {p:.4f}")
-    print("Expected frequencies:")
-    print(expected)
+
+    plt.figure(figsize=(6, 4))
     
+    plt.imshow(contingency_table, cmap="RdPu", vmin=0, vmax=200)
+
+    #adding a colorbar to display the mapping of colors to numerical values.
+    plt.colorbar()
+
+    plt.title('Map of Confusion Matrix')
+    plt.xlabel('Observed Values')
+    plt.ylabel('Forecasted Values')
+
+    plt.xticks(ticks=[0, 1], labels=['list2=1', 'list2=0'])
+    plt.yticks(ticks=[0, 1], labels=['list1=1', 'list1=0'])
+
+    #get the numeric values
+    for i in range(contingency_table.shape[0]):
+        for j in range(contingency_table.shape[1]):
+            plt.text(j, i, str(contingency_table[i, j]),
+                     ha="center", va="center", color="black")
+
+    plt.show()
+
     # Return all results as a dictionary
     return {
         'contingency_table': contingency_table,
@@ -530,11 +544,7 @@ def binary_event_analysis(list1, list2):
         'false_alarm_rate': false_alarm_rate,
         'proportion_correct': proportion_correct,
         'false_alarm_ratio': false_alarm_ratio,
-        'heidke_skill_score': HSS,
-        'chi2_statistic': chi2,
-        'chi2_dof': dof,
-        'chi2_p_value': p,
-        'expected_frequencies': expected
+        'heidke_skill_score': HSS
     }
 
 
