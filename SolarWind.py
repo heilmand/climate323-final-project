@@ -529,8 +529,8 @@ def binary_event_analysis(list1, list2):
     plt.xlabel('Observed Values')
     plt.ylabel('Forecasted Values')
 
-    plt.xticks(ticks=[0, 1], labels=['list2=1', 'list2=0'])
-    plt.yticks(ticks=[0, 1], labels=['list1=1', 'list1=0'])
+    plt.xticks(ticks=[0, 1], labels=['1', '0'])
+    plt.yticks(ticks=[0, 1], labels=['1', '0'])
 
     #get the numeric values
     for i in range(contingency_table.shape[0]):
