@@ -499,11 +499,16 @@ def binary_event_analysis(list1, list2):
     proportion_correct = (a + d) / N if N != 0 else np.nan
     # False Alarm Ratio: Proportion of forecasted positives that were false alarms
     false_alarm_ratio = b / (a + b) if (a + b) != 0 else np.nan
+
+    Precision = (a) / (a + b) if (a) != 0 else np.nan
+    Recall = (a) / (a + c) if (a) != 0 else np.non
     
     print(f"\nHit Rate (True Positive Rate): {hit_rate:.4f}")
     print(f"False Alarm Rate: {false_alarm_rate:.4f}")
     print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
     print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
+    print(f"percision: {Precision}")
+    print(f"recall {Recall}")
 
     # Calculate Heidke Skill Score (HSS)
     # Expected accuracy by chance
@@ -545,6 +550,8 @@ def binary_event_analysis(list1, list2):
         'proportion_correct': proportion_correct,
         'false_alarm_ratio': false_alarm_ratio,
         'heidke_skill_score': HSS
+        'precision': precision 
+        'recall': recall
     }
 
 
