@@ -569,7 +569,70 @@ print('\n yay!  we have some stats! *high five*')
 # >>>>>>> Stashed changes:test.py
 
 # %% [markdown]
-#
+#Here is a ROC curve along with some analysis: 
+from sklearn.metrics import roc_curve, auc
+from datetime import timedelta
+
+#ROC Curve Function 
+def plot_roc_from_scores(true_labels, condition_scores):
+    """
+    Generates and plots an ROC curve from binary true labels and discrete prediction scores.
+    
+    Parameters:
+    - true_labels: Array-like of 0s and 1s representing actual event occurrences (e.g., dst_binary)
+    - condition_scores: Array-like of integers (0–5) representing the number of solar wind thresholds met
+
+    Output:
+    - Displays ROC curve and prints AUC.
+    """
+    y_true = np.array(true_labels)
+    y_scores = np.array(condition_scores)
+
+    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+    roc_auc = auc(fpr, tpr)
+
+    plt.figure(figsize=(6, 5))
+    plt.plot(fpr, tpr, color='pink', lw=2,
+             label=f'ROC Curve (AUC = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='No Skill')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve for Solar Wind Event Forecasting')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    print(f"AUC (Area Under Curve): {roc_auc:.4f}")
+    return 
+
+
+sw_score = np.zeros(math.ceil(len(time) / 120))
+window_size = timedelta(days=5)
+start, stop = time[0], time[-1]
+idx = 0
+
+while start + window_size < stop:
+    end = start + window_size
+    locations = (time >= start) & (time < end)
+    
+    c = 0
+    if np.max(swavgB_filt[locations]) > 15:
+        c += 1
+    if np.max(swdensity_filt[locations]) > 15:
+        c += 1
+    if np.max(swpressure_filt[locations]) > 10:
+        c += 1
+    if np.max(swtemp_filt[locations]) > 7.5 * 10**5:
+        c += 1
+    if np.max(swvelocity_filt[locations]) > 550:
+        c += 1
+
+    sw_score[idx] = c  # Store the score (0–5)
+    start += window_size
+    idx += 1
+
+plot_roc_from_scores(dst_binary, sw_score)
 
 # %% [markdown]
 #
