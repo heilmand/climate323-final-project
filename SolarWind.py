@@ -274,7 +274,7 @@ swtemp_filt = np.empty(swtemp.size)
 dst_filt = np.empty(dst.size)
 
 freq_ranged = 5/365
-freq_rangey = (3*31)/365
+freq_rangey = 75/365
 
 print(1/dom_freqs[0]/365)
 print(1/dom_freqs[12])
@@ -356,15 +356,15 @@ for i in range(len(dst)):
 
 # %%
 #Here we will create an array to hold our true
-dst_binary = np.zeros(math.ceil(len(time) / 144))
-window_size = timedelta(days=6)
+dst_binary = np.zeros(math.ceil(len(time) / 120))
+window_size = timedelta(days=5)
 start, stop = time[0], time[-1]
 idx = 0
 while start + window_size < stop:
     end = start + window_size
     locations = (time >= start) & (time < end)
     subset = dst[locations]
-    if(np.min(subset) < -70):
+    if(np.min(subset) < -75):
         dst_binary[idx] = True
     start += window_size
     idx += 1
@@ -410,8 +410,8 @@ fig.tight_layout()
 #this time however, we will us a while loop and datetime objects to retrieve 3 day time intervals instead of
 #checking each data point individually
 #Here we will create an array to hold our true
-sw_binary = np.zeros(math.ceil(len(time) / 144))
-window_size = timedelta(days=6)
+sw_binary = np.zeros(math.ceil(len(time) / (120)))
+window_size = timedelta(days=5)
 start, stop = time[0], time[-1]
 idx = 0
 count = 0
@@ -426,7 +426,7 @@ while start + window_size < stop:
         c = c+1
     if np.max(swpressure_filt[locations]) > 10:
         c = c+1
-    if np.max(swtemp_filt[locations]) > 7.5*10**5:
+    if np.max(swtemp_filt[locations]) > 5*10**5:
         c = c+1
     if np.max(swvelocity_filt[locations]) > 550:
         c = c+1
@@ -453,7 +453,7 @@ ax1.set_title(f'Events Identified from Hourly DST Data\nTotal Events Identified:
 ax1.set_xlabel(r'Date $(year)$')
 ax1.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax2.set_title(f'Events Identified from DST Data, 3 day window\nTotal Events Identified: {int(sum(dst_binary))}')   
+ax2.set_title(f'Events Identified from DST Data, 5 day window\nTotal Events Identified: {int(sum(dst_binary))}')   
 ax2.set_xlabel('5 day window')
 ax2.set_ylabel('1 = Solar Event and 0 = No Event')
 
@@ -461,7 +461,7 @@ ax3.set_title(f'Events Identified from Hourly Solar Wind Data\nTotal Events Iden
 ax3.set_xlabel(r'Date $(year)$')
 ax3.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax4.set_title(f'Events Identified from Solar Wind Data, 3 day window\nTotal Events Identified: {int(sum(sw_binary))}')   
+ax4.set_title(f'Events Identified from Solar Wind Data, 5 day window\nTotal Events Identified: {int(sum(sw_binary))}')   
 ax4.set_xlabel('5 day window')
 ax4.set_ylabel('1 = Solar Event and 0 = No Event')
 print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
