@@ -45,6 +45,9 @@
 # Describe your approach for each question in the lab description and interpretation of the results for that question.
 # Start with an over-arching paragraph to describe your approach as you see fit.
 
+# %% [markdown]
+# Start by importing the data from OMNI. We used a csv file and data from 2000 to 2024 to show 2 solar cycles. From OMNI we chose hourly data because trying to get minute data from OMNI takes too long to upload into a notebook. From OMNI, we retrieved time of the measurement, the average magnetic field at 1 AU, the solar wind speed at 1 AU, the solar wind pressure at 1 AU, the solar wind temperature at 1 AU, the solar wind density at 1 AU and the DST Index from stations around the equator on the surface of the Earth.
+
 # %%
 # imports the libraries needed for the project
 import numpy as np
@@ -64,6 +67,9 @@ swtemp = np.array(data ['1AU_IP_PLASMA_TEMP_Deg_K'], dtype = float)
 swdensity = np.array(data['1AU_IP_N_ION_Per_cc'], dtype = float)
 dst = np.array(data['1H_DST_nT'], dtype = float)
 
+# %% [markdown]
+# Due to OMNI being real world data there are some times where there was no measurements and OMNI records these not as Nans but as the highest order minus 1. Therefore, to prevent these numbers from being read, we filtered them out using different thresholds of the max value each of the types of parameters can have.
+
 # %%
 # values that need to be filtered due to null data points
 arrays = [swavgB, swdensity, swvelocity, swpressure, swtemp]
@@ -74,6 +80,9 @@ for array, threshold in zip(arrays, filters):
     for index, value in enumerate(array):
         if value >= threshold:
             array[index] = np.nan
+
+# %% [markdown]
+# First step is to visualize the data to ensure some periodic behavior exists for the fft.
 
 # %%
 # correlates data to labels
@@ -96,14 +105,15 @@ for ax, (label, (x, y)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %% [markdown]
-# Between 2019 and 2022 most of the data is consistent, showing low solar activity. The end of the data specifically around 2024 shows a lot of variety demostrating higher solar activy aligning with the solar cycle with solar min in 2019 and solar max in 2024.
+# The plots show the solar cycle with solar maximums around 2003, 2014 and 2024 and the solar minimums around 2008 and 2019. Overall, all the solar wind parameters show increases during solar maximums and lower values in solar minimum years. The DST being negative acts in the opposite way, decreasing during solar maximum. This suggests there is periodic behavior and we can then proceed with the fft.
+#
 
 # %% [markdown]
-# While the most notable solar event from the plots is the May 2024 storm it is not the best example to show how solar wind parameters behave during a CME. This is because the May 2024 storm is the result of a cannibal CME which means that there were several CMEs that were back to back only a few hours apart. Therefore we decided to go with the April 23rd storm which was the result on a single CME to showcase how solar wind changes during a solar event. 
+# While the most notable solar events from the plots during solar maximums, it is not the best example to show how solar wind parameters behave during a CME. This is because the they are major storms that could have been the result of multiple CMEs back to back (cannibal CME). Therefore we decided to go with the April 23rd storm which was the result on a single CME to showcase how solar wind changes during a solar event.
 
 # %%
 # creates a new figure for plots
-fig, axes = plt.subplots(2,3, figsize = (15,10))
+fig, axes = plt.subplots(2,3, figsize = (15,8))
 fig.suptitle('April 2023 CME')
 # for loop to add data to each plot
 for ax, (label, (x, y)) in zip(axes.flat, data.items()):
@@ -122,6 +132,9 @@ fig.tight_layout()
 
 # %% [markdown]
 # During a CME the magnetic field at 1 AU increases at the arrival of the CME and conitnues to increase before decreasing after the passing of the CME. The solar wind velocity also increases when the storm arrives before decreasing slightly again and remaining steady. There is a small peak in the solar wind pressure, density and temperature at the arrival of the CME before it decreases again. Lastly, the DST Index decreases to negative during the CME before recovering. This behavior matches the the structure of a CME. Typically a CME will have a shock associated with where the fast solar wind from the CME over takes the slow solar wind in front forming the shock. However, there does not have to be a shock associated with the CME. This causes an increase in solar wind speed when the shock and CME reach Lagrange point 1. Since the shock is at the beginning there is a bigger increase at the start of the CME before decreasing a little while the magnetic cloud of the CME passes. In the magnetic cloud of a CME there is a magnetic field as the name suggests. However the magnetic cloud mainly contains the magnetic cloud and nothing else. Therefore, the magnetic field should increase at the arrival of the shock and continue to increase and stay at a higher value during the passing of the magnetic cloud. However the solar wind parameter should increase at the arrival of the shock due to the compression of the solar wind but then drop during the passing of the magnetic cloud which is seen with the April 23rd storm of 2023. Lastly the DST measures the impact of the magnetic field on Earth surface with Earth's magnetic field therefore is showcases the opposite effect of Lagrange point 1 by decreasing due to the CME before recovering back to around 0 nT.
+
+# %% [markdown]
+# Next step is to do the fft however the fft cannot have any NaN values. To start we created an interpolate function that replaces any NaN values with values similar that are around it allowing us to proceed with the fft and ifft later. Then we created a function that takes the fft and returns arrays allowing us to plot the power spectrum.
 
 # %%
 from scipy.fftpack import fft, ifft, fftfreq
@@ -177,6 +190,10 @@ def sort_harmonics_amp(harmonics):
     return sorted_h
 
 
+# %% [markdown]
+# Plots the power spectrums for each parameter and finds the top 5 dominant frequencies in each parameter. The dominant frequencies are found by finding the max power and then the corresponding frequency and adding it to an array then deleting that value and finding the new max.
+#
+
 # %%
 #correlates data with labels
 data = {'Average Magnetic Field at 1 AU|Magnetic Field (nT)': (time,swavgB),
@@ -190,9 +207,6 @@ fig, axes = plt.subplots(2,3, figsize = (15,8))
 # for loop to add data to each plot
 fig.suptitle('Power Spectrums')
 
-dom_amps = []
-dom_freqs = []
-
 for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     freq, power, n, harmonics = analyze_fft(i)
     sorted_amps = sort_harmonics_amp(harmonics)
@@ -205,6 +219,16 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
     ax.set_ylabel(f"Power ({unit}^2)")
     ax.set_xlim(-0.01,1.5)
 
+fig.tight_layout()
+
+# %%
+#arrays for storing the dominant frequencies
+dom_amps = []
+dom_freqs = []
+
+for ax, (label, (x, i)) in zip(axes.flat, data.items()):
+    freq, power, n, harmonics = analyze_fft(i)
+    sorted_amps = sort_harmonics_amp(harmonics)
     freq = abs(freq)
 
     dominant_frequencies = []
@@ -229,8 +253,13 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
         years = days / 365
         print(f'\t {rank} Dominant frequency: {freq:.4f} cycles per day (~{days:.2f} days or ~{years:.4f} years)')
 
+# %% [markdown]
+# Dominant frequencies that are repeated through multiple of the parameters are 12 years, 27 days and 9 days. The 12 years correlates to the solar cycle and the 27 days correlates to the solar rotation cycle so these as dominant frequencies is expected.
+#
 
-fig.tight_layout()
+# %% [markdown]
+# Removes the dominant frequencies using a band pass filter and ifft. Removes all frequencies around 5 days of the 2 dominant frequencies in days and 3 months for the dominant frequency in years.
+#
 
 # %%
 # original data arrays
@@ -244,11 +273,11 @@ swtemp_filt = np.empty(swtemp.size)
 dst_filt = np.empty(dst.size)
 
 freq_ranged = 5/365
-freq_rangey = 62/365
+freq_rangey = (3*31)/365
 
-print(dom_freqs[0])
-print(dom_freqs[12])
-print(dom_freqs[13])
+print(1/dom_freqs[0]/365)
+print(1/dom_freqs[12])
+print(1/dom_freqs[8])
 
 newarray = [swavgB_filt, swdensity_filt, swvelocity_filt, swpressure_filt, swtemp_filt, dst_filt]
 # use ifft to filter out dominant frequencies found above
@@ -260,7 +289,7 @@ for i in range(6):
 
     mask1 = (np.abs(freqs) < dom_freqs[0]+freq_rangey) & (np.abs(freqs) > dom_freqs[0]-freq_rangey) & (freqs != 0)
     mask2 = (np.abs(freqs) < dom_freqs[12]+freq_ranged) & (np.abs(freqs) > dom_freqs[12]-freq_ranged) & (freqs != 0)  
-    mask3 = (np.abs(freqs) < dom_freqs[13]+freq_ranged) & (np.abs(freqs) > dom_freqs[13]-freq_ranged) & (freqs != 0) 
+    mask3 = (np.abs(freqs) < dom_freqs[8]+freq_ranged) & (np.abs(freqs) > dom_freqs[8]-freq_ranged) & (freqs != 0) 
 
     amps_filt = amps.copy()
     amps_filt[mask1]=0
@@ -274,6 +303,10 @@ swvelocity_filt = newarray[2]
 swpressure_filt = newarray[3]
 swtemp_filt = newarray[4]
 dst_filt = newarray[5]
+
+# %% [markdown]
+# Plots the new data with the dominant frequencies filtered out.
+#
 
 # %%
 # correlates data to labels
@@ -298,6 +331,10 @@ for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %% [markdown]
+# The solar wind speed appears to be the most impacted by the dominant frequencies removed as it shows the change from the original to the filtered data
+#
+
+# %% [markdown]
 # ### Identifying DST Events 2.0
 
 # %%
@@ -311,6 +348,18 @@ dst_events = np.zeros(len(dst))
 for i in range(len(dst)):
     if(dst[i] < -70):
         dst_events[i] = True
+
+# %%
+# plots the events detected from the dst
+fig, ax = plt.subplots(1,1)
+#add data to the plot
+ax.plot(time,swEvent, color = '#bd1caa')
+# adds proper titles and labels
+ax.set_title(f'Solar Events Identified with DST Index\nTotal Events Identified: {int(sum(dst_events))}')  
+ax.set_xlabel(r'Date $(year)$')
+ax.set_ylabel('Event')
+ax.legend()
+fig.tight_layout()
 
 # %%
 #Here we will create an array to hold our true
@@ -352,6 +401,18 @@ for i in range(swavgB_filt.size):
 
 
 # %%
+# plots the events detected from the solar wind parameters 
+fig, ax = plt.subplots(1,1)
+#add data to the plot
+ax.plot(time,swEvent, color = '#bd1caa')
+# adds proper titles and labels
+ax.set_title(f'Solar Events Identified with Filtered Solar Wind Parameters\nTotal Events Identified: {int(sum(swEvent))}')  
+ax.set_xlabel(r'Date $(year)$')
+ax.set_ylabel('Event')
+ax.legend()
+fig.tight_layout()
+
+# %%
 #here we will perform our binary event analysis on the Solar Wind data starting with the same cutoffs as chosen above
 #this time however, we will us a while loop and datetime objects to retrieve 5 day time intervals instead of
 #checking each data point individually
@@ -385,7 +446,7 @@ while start + window_size < stop:
 
 # %%
 #create figure and suplots to plot results
-fig, ([ax1, ax2], [ax3, ax4]) = plt.subplots(2,2, figsize=(10, 6))
+fig, ([ax1, ax2], [ax3, ax4]) = plt.subplots(2,2, figsize=(10, 8))
 #dst events by hour
 ax1.plot(time, dst_events, color = '#bd1caa')
 #dst events 5 day window
@@ -395,19 +456,19 @@ ax3.plot(time, swEvent, color = '#bd1caa')
 #solar wind events 5 day window
 ax4.plot(sw_binary, color = '#bd1caa')
 # adds proper titles and labels
-ax1.set_title('Events Identified from Hourly DST Data')   
+ax1.set_title(f'Events Identified from Hourly DST Data\nTotal Events Identified: {int(sum(dst_events))}')   
 ax1.set_xlabel(r'Date $(year)$')
 ax1.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax2.set_title('Events Identified from DST Data, 5 day window')   
+ax2.set_title(f'Events Identified from DST Data, 5 day window\nTotal Events Identified: {int(sum(dst_binary))}')   
 ax2.set_xlabel('5 day window')
 ax2.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax3.set_title('Events Identified from Hourly Solar Wind Data')   
+ax3.set_title(f'Events Identified from Hourly Solar Wind Data\nTotal Events Identified: {int(sum(swEvent))}')   
 ax3.set_xlabel(r'Date $(year)$')
 ax3.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax4.set_title('Events Identified from Solar Wind Data, 5 day window')   
+ax4.set_title(f'Events Identified from Solar Wind Data, 5 day window\nTotal Events Identified: {int(sum(sw_binary))}')   
 ax4.set_xlabel('5 day window')
 ax4.set_ylabel('1 = Solar Event and 0 = No Event')
 print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
@@ -424,10 +485,10 @@ fig.tight_layout()
 #
 
 
-# %%
-### Question 3
-Description of what you need to do and interpretation of results (if applicable)
-## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
+# %% [markdown]
+# ### Question 3
+# Description of what you need to do and interpretation of results (if applicable)
+# ## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
 
 # %%
 ### Question 3
@@ -526,8 +587,8 @@ def binary_event_analysis(list1, list2):
     plt.colorbar()
 
     plt.title('Map of Confusion Matrix')
-    plt.xlabel('Observed Values')
-    plt.ylabel('Forecasted Values')
+    plt.xlabel('Observed Values (DST Index)')
+    plt.ylabel('Forecasted Values (Solar Wind)')
 
     plt.xticks(ticks=[0, 1], labels=['1', '0'])
     plt.yticks(ticks=[0, 1], labels=['1', '0'])
@@ -549,9 +610,9 @@ def binary_event_analysis(list1, list2):
         'false_alarm_rate': false_alarm_rate,
         'proportion_correct': proportion_correct,
         'false_alarm_ratio': false_alarm_ratio,
-        'heidke_skill_score': HSS
-        'precision': precision 
-        'recall': recall
+        'heidke_skill_score': HSS,
+        'Precision': Precision, 
+        'Recall': Recall
     }
 
 
@@ -569,70 +630,70 @@ print('\n yay!  we have some stats! *high five*')
 # >>>>>>> Stashed changes:test.py
 
 # %% [markdown]
-#Here is a ROC curve along with some analysis: 
-from sklearn.metrics import roc_curve, auc
-from datetime import timedelta
-
-#ROC Curve Function 
-def plot_roc_from_scores(true_labels, condition_scores):
-    """
-    Generates and plots an ROC curve from binary true labels and discrete prediction scores.
-    
-    Parameters:
-    - true_labels: Array-like of 0s and 1s representing actual event occurrences (e.g., dst_binary)
-    - condition_scores: Array-like of integers (0–5) representing the number of solar wind thresholds met
-
-    Output:
-    - Displays ROC curve and prints AUC.
-    """
-    y_true = np.array(true_labels)
-    y_scores = np.array(condition_scores)
-
-    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
-    roc_auc = auc(fpr, tpr)
-
-    plt.figure(figsize=(6, 5))
-    plt.plot(fpr, tpr, color='pink', lw=2,
-             label=f'ROC Curve (AUC = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='No Skill')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve for Solar Wind Event Forecasting')
-    plt.legend(loc='lower right')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-    print(f"AUC (Area Under Curve): {roc_auc:.4f}")
-    return 
-
-
-sw_score = np.zeros(math.ceil(len(time) / 120))
-window_size = timedelta(days=5)
-start, stop = time[0], time[-1]
-idx = 0
-
-while start + window_size < stop:
-    end = start + window_size
-    locations = (time >= start) & (time < end)
-    
-    c = 0
-    if np.max(swavgB_filt[locations]) > 15:
-        c += 1
-    if np.max(swdensity_filt[locations]) > 15:
-        c += 1
-    if np.max(swpressure_filt[locations]) > 10:
-        c += 1
-    if np.max(swtemp_filt[locations]) > 7.5 * 10**5:
-        c += 1
-    if np.max(swvelocity_filt[locations]) > 550:
-        c += 1
-
-    sw_score[idx] = c  # Store the score (0–5)
-    start += window_size
-    idx += 1
-
-plot_roc_from_scores(dst_binary, sw_score)
+# Here is a ROC curve along with some analysis: 
+# from sklearn.metrics import roc_curve, auc
+# from datetime import timedelta
+#
+# ROC Curve Function 
+# def plot_roc_from_scores(true_labels, condition_scores):
+#     """
+#     Generates and plots an ROC curve from binary true labels and discrete prediction scores.
+#     
+#     Parameters:
+#     - true_labels: Array-like of 0s and 1s representing actual event occurrences (e.g., dst_binary)
+#     - condition_scores: Array-like of integers (0–5) representing the number of solar wind thresholds met
+#
+#     Output:
+#     - Displays ROC curve and prints AUC.
+#     """
+#     y_true = np.array(true_labels)
+#     y_scores = np.array(condition_scores)
+#
+#     fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+#     roc_auc = auc(fpr, tpr)
+#
+#     plt.figure(figsize=(6, 5))
+#     plt.plot(fpr, tpr, color='pink', lw=2,
+#              label=f'ROC Curve (AUC = {roc_auc:.2f})')
+#     plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='No Skill')
+#     plt.xlabel('False Positive Rate')
+#     plt.ylabel('True Positive Rate')
+#     plt.title('ROC Curve for Solar Wind Event Forecasting')
+#     plt.legend(loc='lower right')
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.show()
+#
+#     print(f"AUC (Area Under Curve): {roc_auc:.4f}")
+#     return 
+#
+#
+# sw_score = np.zeros(math.ceil(len(time) / 120))
+# window_size = timedelta(days=5)
+# start, stop = time[0], time[-1]
+# idx = 0
+#
+# while start + window_size < stop:
+#     end = start + window_size
+#     locations = (time >= start) & (time < end)
+#     
+#     c = 0
+#     if np.max(swavgB_filt[locations]) > 15:
+#         c += 1
+#     if np.max(swdensity_filt[locations]) > 15:
+#         c += 1
+#     if np.max(swpressure_filt[locations]) > 10:
+#         c += 1
+#     if np.max(swtemp_filt[locations]) > 7.5 * 10**5:
+#         c += 1
+#     if np.max(swvelocity_filt[locations]) > 550:
+#         c += 1
+#
+#     sw_score[idx] = c  # Store the score (0–5)
+#     start += window_size
+#     idx += 1
+#
+# plot_roc_from_scores(dst_binary, sw_score)
 
 # %% [markdown]
 #
