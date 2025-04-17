@@ -46,6 +46,7 @@
 # Start with an over-arching paragraph to describe your approach as you see fit.
 
 # %% [markdown]
+# ## Data Collection
 # Start by importing the data from OMNI. We used a csv file and data from 2000 to 2024 to show 2 solar cycles. From OMNI we chose hourly data because trying to get minute data from OMNI takes too long to upload into a notebook. From OMNI, we retrieved time of the measurement, the average magnetic field at 1 AU, the solar wind speed at 1 AU, the solar wind pressure at 1 AU, the solar wind temperature at 1 AU, the solar wind density at 1 AU and the DST Index from stations around the equator on the surface of the Earth.
 
 # %%
@@ -109,7 +110,7 @@ fig.tight_layout()
 #
 
 # %% [markdown]
-# While the most notable solar events from the plots during solar maximums, it is not the best example to show how solar wind parameters behave during a CME. This is because the they are major storms that could have been the result of multiple CMEs back to back (cannibal CME). Therefore we decided to go with the April 23rd storm which was the result on a single CME to showcase how solar wind changes during a solar event.
+# While the most notable solar events from the plots during solar maximums, it is not the best example to show how solar wind parameters behave during a CME. This is because the they are major storms that could have been the result of multiple CMEs back to back (cannibal CME). Therefore we decided to go with the April 23rd, 2023 storm which was the result on a single CME to showcase how solar wind changes during a solar event.
 
 # %%
 # creates a new figure for plots
@@ -305,7 +306,7 @@ swtemp_filt = newarray[4]
 dst_filt = newarray[5]
 
 # %% [markdown]
-# Plots the new data with the dominant frequencies filtered out.
+# Plots the new data with the dominant frequencies filtered out from the ifft band pass filter.
 #
 
 # %%
@@ -335,6 +336,10 @@ fig.tight_layout()
 #
 
 # %% [markdown]
+# ## Data Analysis
+# *takes a while to load
+
+# %% [markdown]
 # ### Identifying DST Events 2.0
 
 # %%
@@ -350,21 +355,9 @@ for i in range(len(dst)):
         dst_events[i] = True
 
 # %%
-# plots the events detected from the dst
-fig, ax = plt.subplots(1,1)
-#add data to the plot
-ax.plot(time,swEvent, color = '#bd1caa')
-# adds proper titles and labels
-ax.set_title(f'Solar Events Identified with DST Index\nTotal Events Identified: {int(sum(dst_events))}')  
-ax.set_xlabel(r'Date $(year)$')
-ax.set_ylabel('Event')
-ax.legend()
-fig.tight_layout()
-
-# %%
 #Here we will create an array to hold our true
-dst_binary = np.zeros(math.ceil(len(time) / 120))
-window_size = timedelta(days=5)
+dst_binary = np.zeros(math.ceil(len(time) / 144))
+window_size = timedelta(days=6)
 start, stop = time[0], time[-1]
 idx = 0
 while start + window_size < stop:
@@ -414,11 +407,11 @@ fig.tight_layout()
 
 # %%
 #here we will perform our binary event analysis on the Solar Wind data starting with the same cutoffs as chosen above
-#this time however, we will us a while loop and datetime objects to retrieve 5 day time intervals instead of
+#this time however, we will us a while loop and datetime objects to retrieve 3 day time intervals instead of
 #checking each data point individually
 #Here we will create an array to hold our true
-sw_binary = np.zeros(math.ceil(len(time) / 120))
-window_size = timedelta(days=5)
+sw_binary = np.zeros(math.ceil(len(time) / 144))
+window_size = timedelta(days=6)
 start, stop = time[0], time[-1]
 idx = 0
 count = 0
@@ -460,7 +453,7 @@ ax1.set_title(f'Events Identified from Hourly DST Data\nTotal Events Identified:
 ax1.set_xlabel(r'Date $(year)$')
 ax1.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax2.set_title(f'Events Identified from DST Data, 5 day window\nTotal Events Identified: {int(sum(dst_binary))}')   
+ax2.set_title(f'Events Identified from DST Data, 3 day window\nTotal Events Identified: {int(sum(dst_binary))}')   
 ax2.set_xlabel('5 day window')
 ax2.set_ylabel('1 = Solar Event and 0 = No Event')
 
@@ -468,22 +461,12 @@ ax3.set_title(f'Events Identified from Hourly Solar Wind Data\nTotal Events Iden
 ax3.set_xlabel(r'Date $(year)$')
 ax3.set_ylabel('1 = Solar Event and 0 = No Event')
 
-ax4.set_title(f'Events Identified from Solar Wind Data, 5 day window\nTotal Events Identified: {int(sum(sw_binary))}')   
+ax4.set_title(f'Events Identified from Solar Wind Data, 3 day window\nTotal Events Identified: {int(sum(sw_binary))}')   
 ax4.set_xlabel('5 day window')
 ax4.set_ylabel('1 = Solar Event and 0 = No Event')
 print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
 
 fig.tight_layout()
-
-# %%
-=======
-# %% [markdown]
-# <<<<<<< HEAD
-# =======
-# ### Question 1
-# Write a function to read the *.csv files using numpy.genfromtxt. Leverage the example above to ensure success.
-#
-
 
 # %% [markdown]
 # ### Question 3
@@ -620,6 +603,131 @@ def binary_event_analysis(list1, list2):
 #try out the binary analysis function, natalie please feel free to fix this part up and do it properly later!
 binary_event_analysis(dst_binary, sw_binary)
 print('\n yay!  we have some stats! *high five*')
+
+# %%
+import math
+from datetime import timedelta
+from scipy.stats import qmc
+
+
+window_day = timedelta(days=1) #start with 1 day window
+start, stop = time[0], time[-1] #start and end of data set
+n_windows_1d = math.ceil((stop - start) / window_day) #how many one day windows fit in the period
+W = np.zeros((n_windows_1d, 6)) #empty array to hold all the vals
+
+for i in range(n_windows_1d):  #loop over each day-index from 0 to the number of windows
+    t0 = start + i * window_day
+    t1 = t0 + window_day #get the start and stop of each time slice
+    mask = (time >= t0) & (time < t1) #find the points within this slice
+    
+    #compute the summary numbers for that day
+    #use .real because of a warning error about discarding imaginary parts
+    W[i, 0] = np.min(dst[mask]) #picks the dst vals that fall in that day, and then take the smallest
+    W[i, 1] = np.max( swavgB_filt[mask].real )
+    W[i, 2] = np.max( swdensity_filt[mask].real ) #grab the vals, but the largest
+    W[i, 3] = np.max( swpressure_filt[mask].real )
+    W[i, 4] = np.max( swtemp_filt[mask].real )
+    W[i, 5] = np.max( swvelocity_filt[mask].real )
+
+
+#helper function to take window size, dst threshold, and array of sw vals and return a boolian to
+#say if the event occured or not
+def compute_events(window_days, dst_cut, sw_cuts, sw_thresh=3):
+    step = window_days
+    n_int = math.ceil(n_windows_1d / step) #find how many sections of the windowed days fit in the whole space
+    dst_ev = np.zeros(n_int, dtype=bool) #empty list to hold vals (bool)
+    sw_ev = np.zeros(n_int, dtype=bool) #empty list to hold vals (bool)
+    for j in range(n_int): #loop through num of sections
+        seg = W[j*step:(j+1)*step] #grab a chunck of the rows
+        dst_ev[j] = np.min(seg[:, 0]) < dst_cut #use the daily min dst col to find if the val is below min
+        agg_max = np.nanmax(seg[:, 1:], axis=0) #get columns 1-5, ignore n/as and get the cols max
+        sw_ev[j] = np.sum(agg_max > sw_cuts) >= sw_thresh #find the peaks that exceed the cutoffs
+    return dst_ev, sw_ev
+
+#convert the booleans into hit rate/false alarm rate
+def get_rates(dst_ev, sw_ev):
+    a = np.sum(dst_ev & sw_ev)
+    b = np.sum(dst_ev & ~sw_ev)
+    c = np.sum(~dst_ev & sw_ev)
+    d = np.sum(~dst_ev & ~sw_ev)
+    hit_rate = a / (a + c) if (a + c) > 0 else np.nan
+    false_alarm_rate = b / (b + d) if (b + d) > 0 else np.nan
+    return hit_rate, false_alarm_rate
+
+#set the parameter ranges that we are going to check
+param_lists = {
+    'window':   [1, 3, 5, 7, 10],
+    'dst':      [-70, -150, -330],
+    'B':        [5, 15, 30],
+    'density':  [5, 15, 25],
+    'pressure': [5, 10, 20],
+    'temp':     [3e5, 7.5e5, 1e6],
+    'velocity': [300, 550, 800]
+}
+
+#latin hypercube sampling -- parameter range is sampled evenly, but only 200 samples are taken
+keys = list(param_lists.keys()) #hold parameters
+sampler = qmc.LatinHypercube(d=len(keys)) #do the latinhypercube
+samples = sampler.random(n=200) #hold samples
+
+hrs, fars, combos = [], [], []
+#convert the noramlized sample into the closet index in the parameter list
+#build 5-var cuttoff array
+#make boolean series
+#get hit rate/false alarm rate
+#store
+for row in samples: #loop through latin hypercube sampling output
+    combo = {}
+    for idx, key in enumerate(keys): #for each key look up the possible values
+        choices = param_lists[key]
+        sel = min(int(row[idx] * len(choices)), len(choices)-1) #scale the normalized sample
+        combo[key] = choices[sel]
+    sw_cuts = np.array([combo['B'], combo['density'],
+                        combo['pressure'], combo['temp'],
+                        combo['velocity']]) #get the combo
+    dst_ev, sw_ev = compute_events(combo['window'], combo['dst'], sw_cuts) #count the events
+    hr, far = get_rates(dst_ev, sw_ev) 
+    hrs.append(hr)
+    fars.append(far)
+    combos.append(combo)
+
+#find the top three combos based on lowest false alarm rate and highest hit rate
+ranked = sorted(
+    zip(hrs, fars, combos),
+    key=lambda x: (-x[0], x[1])
+)
+top3 = ranked[:3]
+
+##make a single roc inspired plot that has the top 3 labeled
+plt.figure(figsize=(7,7))
+plt.scatter(fars, hrs, alpha=0.6, color = 'hotpink')
+plt.plot([0, 1], [0, 1], 'k--', lw=0.8)
+
+#annotate top 3 on graph
+for rank, (hr, far, combo) in enumerate(top3, start=1):
+    plt.annotate(str(rank), (far, hr),
+                 textcoords="offset points", xytext=(5,-5))
+
+plt.xlabel('False Alarm Rate')
+plt.ylabel('Hit Rate')
+plt.title('ROC: LHS Samples (Top‑3 Highlighted)')
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+
+# 8)print the top 3 combos
+print("Top 3 parameter combos (high HR, low FAR):")
+for rank, (hr, far, combo) in enumerate(top3, start=1):
+    print(f"\nRank {rank}:")
+    print(f" Window size: {combo['window']} days")
+    print(f" DST cutoff: {combo['dst']} nT")
+    print(f" B cutoff: {combo['B']}")
+    print(f" Density cutoff: {combo['density']}")
+    print(f" Pressure cutoff: {combo['pressure']}")
+    print(f" Temp cutoff: {combo['temp']}")
+    print(f" Velocity cutoff: {combo['velocity']}")
+    print(f" Hit Rate: {hr:.3f}")
+    print(f" False Alarm Rate: {far:.3f}")
 
 # %% [markdown]
 # >>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
