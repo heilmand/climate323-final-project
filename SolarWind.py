@@ -340,7 +340,7 @@ fig.tight_layout()
 # *takes a while to load
 
 # %% [markdown]
-# ### Identifying DST Events 2.0
+# ### Identifying DST Events
 
 # %%
 from dateutil.relativedelta import relativedelta
@@ -356,17 +356,17 @@ for i in range(len(dst)):
 
 # %%
 #Here we will create an array to hold our true
-dst_binary = np.zeros(math.ceil(len(time) / 120))
-window_size = timedelta(days=5)
+dst_binary0 = np.zeros(math.ceil(len(time) / 120))
+window_size0 = timedelta(days=5)
 start, stop = time[0], time[-1]
 idx = 0
-while start + window_size < stop:
-    end = start + window_size
+while start + window_size0 < stop:
+    end = start + window_size0
     locations = (time >= start) & (time < end)
     subset = dst[locations]
     if(np.min(subset) < -75):
-        dst_binary[idx] = True
-    start += window_size
+        dst_binary0[idx] = True
+    start += window_size0
     idx += 1
 
 # %% [markdown]
@@ -394,29 +394,17 @@ for i in range(swavgB_filt.size):
 
 
 # %%
-# plots the events detected from the solar wind parameters 
-fig, ax = plt.subplots(1,1)
-#add data to the plot
-ax.plot(time,swEvent, color = '#bd1caa')
-# adds proper titles and labels
-ax.set_title(f'Solar Events Identified with Filtered Solar Wind Parameters\nTotal Events Identified: {int(sum(swEvent))}')  
-ax.set_xlabel(r'Date $(year)$')
-ax.set_ylabel('Event')
-ax.legend()
-fig.tight_layout()
-
-# %%
 #here we will perform our binary event analysis on the Solar Wind data starting with the same cutoffs as chosen above
 #this time however, we will us a while loop and datetime objects to retrieve 3 day time intervals instead of
 #checking each data point individually
 #Here we will create an array to hold our true
-sw_binary = np.zeros(math.ceil(len(time) / (120)))
-window_size = timedelta(days=5)
+sw_binary0 = np.zeros(math.ceil(len(time) / (120)))
+window_size0 = timedelta(days=5)
 start, stop = time[0], time[-1]
 idx = 0
 count = 0
-while start + window_size < stop:
-    end = start + window_size
+while start + window_size0 < stop:
+    end = start + window_size0
     locations = (time >= start) & (time < end)
     subset = dst[locations]
     c = 0
@@ -431,11 +419,91 @@ while start + window_size < stop:
     if np.max(swvelocity_filt[locations]) > 550:
         c = c+1
     if c >=3:
-        sw_binary[idx] = True
+        sw_binary0[idx] = True
     else:
-        sw_binary[idx] = False
-    start += window_size
+        sw_binary0[idx] = False
+    start += window_size0
     idx += 1
+
+
+# %% [markdown]
+# ### Re-code binary list calculations within a function for repeatability
+
+# %%
+#Here we define a function which will record the true/false values for our DST data
+def calc_dst_binary(window_size, cutoff):
+    '''Creates a true or false array for whether or 
+    not a dst event exists in each time interval
+    window is the window size in days
+    cutoff is the dst index below which we count an event, in units of nano-Teslas
+
+    Returns: binary event T/F array for dst data
+    '''
+    dst_binary = np.zeros(math.ceil(len(time) / (window_size * 24)))
+    window = timedelta(days=window_size)
+    start, stop = time[0], time[-1]
+    idx = 0
+    while start + window < stop:
+        end = start + window
+        locations = (time >= start) & (time < end)
+        subset = dst[locations]
+        if(np.min(subset) < cutoff):
+            dst_binary[idx] = True
+        start += window
+        idx += 1
+    return dst_binary
+
+
+# %%
+#Here we define a function which will record the true/false values for our solar wind data
+def calc_sw_binary(window_size, cutoffs):
+    '''Creates a true or false array for whether or 
+    not a sw event exists in each time interval
+    window is the window size in days
+    cutoffs is an array that gives the cutoffs for each variable in the following order:
+    [swavgB_filt, swdensity_filt, swpressure_filt, swtemp_filt, swvelocity_filt]
+
+    Returns: binary event T/F array for sw data
+    '''
+    sw_binary = np.zeros(math.ceil(len(time) / (window_size * 24)))
+    window = timedelta(days=window_size)
+    start, stop = time[0], time[-1]
+    idx = 0
+    count = 0
+    while start + window < stop:
+        end = start + window
+        locations = (time >= start) & (time < end)
+        subset = dst[locations]
+        c = 0
+        if np.max(swavgB_filt[locations]) > cutoffs[0]:
+            c = c+1
+        if np.max(swdensity_filt[locations]) > cutoffs[1]:
+            c = c+1
+        if np.max(swpressure_filt[locations]) > cutoffs[2]:
+            c = c+1
+        if np.max(swtemp_filt[locations]) > cutoffs[3]:
+            c = c+1
+        if np.max(swvelocity_filt[locations]) > cutoffs[4]:
+            c = c+1
+        if c >=3:
+            sw_binary[idx] = True
+        else:
+            sw_binary[idx] = False
+        start += window
+        idx += 1
+    return sw_binary
+
+
+# %%
+#calculate the T/F array for events in the dst data
+window_size = 5 #days
+cutoff = -70 #nT
+dst_binary = calc_dst_binary(window_size, cutoff)
+
+# %%
+#calculate the T/F array for events in the sw data
+cutoffs = [15, 15, 10, 7.5*10**5, 550]
+sw_binary = calc_sw_binary(window_size, cutoffs)
 
 # %%
 #create figure and suplots to plot results
@@ -469,13 +537,9 @@ print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
 fig.tight_layout()
 
 # %% [markdown]
-# ### Question 3
-# Description of what you need to do and interpretation of results (if applicable)
-# ## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
+# ## here is binary event anaylsis on two lists 
 
 # %%
-### Question 3
-#Description of what you need to do and interpretation of results (if applicable)
 ## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
 import numpy as np
 import matplotlib.pyplot as plt
@@ -730,78 +794,76 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
     print(f" False Alarm Rate: {far:.3f}")
 
 # %% [markdown]
-# >>>>>>> 1ae08bcd22831bb67a3e4a9b158ccb901410deab
 # ## Conclusions
 # Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
 # ## References
-# List any references used
-# >>>>>>> Stashed changes:test.py
+#
 
-# %% [markdown]
-# Here is a ROC curve along with some analysis: 
-# from sklearn.metrics import roc_curve, auc
-# from datetime import timedelta
-#
-# ROC Curve Function 
-# def plot_roc_from_scores(true_labels, condition_scores):
-#     """
-#     Generates and plots an ROC curve from binary true labels and discrete prediction scores.
-#     
-#     Parameters:
-#     - true_labels: Array-like of 0s and 1s representing actual event occurrences (e.g., dst_binary)
-#     - condition_scores: Array-like of integers (0–5) representing the number of solar wind thresholds met
-#
-#     Output:
-#     - Displays ROC curve and prints AUC.
-#     """
-#     y_true = np.array(true_labels)
-#     y_scores = np.array(condition_scores)
-#
-#     fpr, tpr, thresholds = roc_curve(y_true, y_scores)
-#     roc_auc = auc(fpr, tpr)
-#
-#     plt.figure(figsize=(6, 5))
-#     plt.plot(fpr, tpr, color='pink', lw=2,
-#              label=f'ROC Curve (AUC = {roc_auc:.2f})')
-#     plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='No Skill')
-#     plt.xlabel('False Positive Rate')
-#     plt.ylabel('True Positive Rate')
-#     plt.title('ROC Curve for Solar Wind Event Forecasting')
-#     plt.legend(loc='lower right')
-#     plt.grid(True)
-#     plt.tight_layout()
-#     plt.show()
-#
-#     print(f"AUC (Area Under Curve): {roc_auc:.4f}")
-#     return 
-#
-#
-# sw_score = np.zeros(math.ceil(len(time) / 120))
-# window_size = timedelta(days=5)
-# start, stop = time[0], time[-1]
-# idx = 0
-#
-# while start + window_size < stop:
-#     end = start + window_size
-#     locations = (time >= start) & (time < end)
-#     
-#     c = 0
-#     if np.max(swavgB_filt[locations]) > 15:
-#         c += 1
-#     if np.max(swdensity_filt[locations]) > 15:
-#         c += 1
-#     if np.max(swpressure_filt[locations]) > 10:
-#         c += 1
-#     if np.max(swtemp_filt[locations]) > 7.5 * 10**5:
-#         c += 1
-#     if np.max(swvelocity_filt[locations]) > 550:
-#         c += 1
-#
-#     sw_score[idx] = c  # Store the score (0–5)
-#     start += window_size
-#     idx += 1
-#
-# plot_roc_from_scores(dst_binary, sw_score)
+# %%
+#Here is a ROC curve along with some analysis: 
+from sklearn.metrics import roc_curve, auc
+from datetime import timedelta
+
+#ROC Curve Function 
+def plot_roc_from_scores(true_labels, condition_scores):
+    """
+    Generates and plots an ROC curve from binary true labels and discrete prediction scores.
+    
+    Parameters:
+    - true_labels: Array-like of 0s and 1s representing actual event occurrences (e.g., dst_binary)
+    - condition_scores: Array-like of integers (0–5) representing the number of solar wind thresholds met
+
+    Output:
+    - Displays ROC curve and prints AUC.
+    """
+    y_true = np.array(true_labels)
+    y_scores = np.array(condition_scores)
+
+    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+    roc_auc = auc(fpr, tpr)
+
+    plt.figure(figsize=(6, 5))
+    plt.plot(fpr, tpr, color='pink', lw=2,
+             label=f'ROC Curve (AUC = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='No Skill')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve for Solar Wind Event Forecasting')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    print(f"AUC (Area Under Curve): {roc_auc:.4f}")
+    return 
+
+
+sw_score = np.zeros(math.ceil(len(time) / 120))
+window_size = timedelta(days=5)
+start, stop = time[0], time[-1]
+idx = 0
+
+while start + window_size < stop:
+    end = start + window_size
+    locations = (time >= start) & (time < end)
+    
+    c = 0
+    if np.max(swavgB_filt[locations]) > 15:
+        c += 1
+    if np.max(swdensity_filt[locations]) > 15:
+        c += 1
+    if np.max(swpressure_filt[locations]) > 10:
+        c += 1
+    if np.max(swtemp_filt[locations]) > 7.5 * 10**5:
+        c += 1
+    if np.max(swvelocity_filt[locations]) > 550:
+        c += 1
+
+    sw_score[idx] = c  # Store the score (0–5)
+    start += window_size
+    idx += 1
+
+plot_roc_from_scores(dst_binary, sw_score)
 
 # %% [markdown]
 #
