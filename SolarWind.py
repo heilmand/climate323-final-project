@@ -351,7 +351,7 @@ import math as math
 #every hour
 dst_events = np.zeros(len(dst))
 for i in range(len(dst)):
-    if(dst[i] < -70):
+    if(dst[i] < -75):
         dst_events[i] = True
 
 # %%
@@ -461,7 +461,7 @@ def calc_sw_binary(window_size, cutoffs):
     not a sw event exists in each time interval
     window is the window size in days
     cutoffs is an array that gives the cutoffs for each variable in the following order:
-    [swavgB_filt, swdensity_filt, swpressure_filt, swtemp_filt, swvelocity_filt]
+    [swavgB_filt (nT), swdensity_filt (km/s), swpressure_filt (nPa), swtemp_filt (K), swvelocity_filt (n per cc)]
 
     Returns: binary event T/F array for sw data
     '''
@@ -497,7 +497,7 @@ def calc_sw_binary(window_size, cutoffs):
 # %%
 #calculate the T/F array for events in the dst data
 window_size = 5 #days
-cutoff = -70 #nT
+cutoff = -75 #nT
 dst_binary = calc_dst_binary(window_size, cutoff)
 
 # %%
@@ -721,7 +721,7 @@ def get_rates(dst_ev, sw_ev):
 #set the parameter ranges that we are going to check
 param_lists = {
     'window':   [1, 3, 5, 7, 10],
-    'dst':      [-70, -150, -330],
+    'dst':      [-75, -150, -330],
     'B':        [5, 15, 30],
     'density':  [5, 15, 25],
     'pressure': [5, 10, 20],
