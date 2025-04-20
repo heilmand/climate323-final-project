@@ -461,7 +461,7 @@ def calc_sw_binary(window_size, cutoffs):
     not a sw event exists in each time interval
     window is the window size in days
     cutoffs is an array that gives the cutoffs for each variable in the following order:
-    [swavgB_filt (nT), swdensity_filt (km/s), swpressure_filt (nPa), swtemp_filt (K), swvelocity_filt (n per cc)]
+    [swavgB_filt (nT), swdensity_filt (n per cc), swpressure_filt (nPa), swtemp_filt (K), swvelocity_filt (km/s)]
 
     Returns: binary event T/F array for sw data
     '''
