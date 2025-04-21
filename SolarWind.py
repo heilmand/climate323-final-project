@@ -21,10 +21,27 @@
 # ### Elise Segal, Daniel Heilmen, Natalie Giovi, Percy Slattery
 #
 # ## Introduction & Approach
-# Add a brief description of the goal and background knowledge for the lab. This can be drawn from the lab description, but should be in your own words.
+# Solar events are a key topic in space weather. On the sun itself, they affect the solar wind speeds and create distortions in the magnetic field. On Earth, they can compress the magnetosphere past GEO orbit leaving satellites vulnerable to solar wind and charge the ionosphere creating distortions in GPS signals. For these reasons, it is beneficial to be able to detect these events which can be done by observing both the sun’s reaction to these events, as well as the Earth’s.
+#
+# Solar events come in three varieties: coronal mass ejections (CMEs), which occur and irregular intervals - particularly common during the solar maximum - produce high density waves that induce current in Earth’s magnetic field, and do so in a shock-sheath-ejecta-cloud sequence[6]; corotating interaction regional shocks (CIRs), which occur on a 27 day phase and are characterized by a high-speed-stream in a stream interaction region (SIR) that overtakes lower-speed streams and survives for a full rotation [2,6]; and solar flares, which are electromagnetic radiation bursts. All of these events result in an increase in solar wind speeds [6].
+#
+# Solar wind is a stream of particles emitted by the sun from its atmosphere. This stream extends along with the sun’s magnetic field out into space. This wind’s speed, strength, and turbulence are reliant with the solar cycle. This cycle is an 11 year cycle from maxima to maxima that corresponds with the flipping of the polarity of the Sun’s magnetic field. The solar minimum features a lower sunspot count at latitudes further away from the equator and poles at opposite sides of the suns, while a maximum features a high amount of equatorial sunspots and turbulent winds. 
+#
+# There are four solar wind states, two of which correspond to the solar minima, one to the maxima, and one unrelated. The “basic” states of the solar wind consist of high-speed streams (HSS) emanating from areas with coronal holes, and low-speed wind of minimum type (LSM).  These states correspond to the “quiet”, or “ground” state occurring with a solar minimum. The third state consists of slow solar wind in the heliosphere during periods of high solar activity which exists in a relatively highly turbulent state. This corresponds to a solar maximum. The last state takes the form of plasma expelled from the sun during coronal mass ejections [11].
+#
+# This essay will be using solar wind speed data since all solar events affect it. CMEs occur in two types that affect the wind differently, gradual CMEs and impulsive CMEs.  Gradual CMEs accelerate slowly and over large distances to speeds of 300 to 600 km/s, while impulsive CMEs accelerate rapidly to speeds up to around the 2000 km/s range. CIRs start as high speed streams of wind that last for an average rotational period of the sun, roughly 27 days [8].
+#
+# The disturbance storm time (DST) index measures the ring current that surrounds the Earth. Since these solar events are magnetic and eject charged particles, they can cause the field to weaken. The more negative the DST-index, the weaker the field and the stronger the storm detected. A storm is properly registered when the DST index drops below -50 nanoteslas [8].
+#
+# This lab aims to demonstrate that by removing the periodicity of the solar wind speed and setting the right condition thresholds for an event to register, we can identify when solar events have occurred. To check that we have properly identified an event, we will check our identified events against the DST index using various methods of data analysis.
 #
 # ## Data
-# List the datasets used, what they describe and any quality/pre-processing before analysis.
+# OMNI2_20002024.csv - A .csv file containing 49 header rows, 3 footer rows, and a table containing 7 columns and 192910 rows. These columns contain the following pieces of data: Time in the year-month-day-hour-minute-second format,  average B field magnitude, plasma temperature, ion number density per cc, plasma flow speed in km/s, flow pressure in nPa, and the 1 hour DST index.
+# This data is hourly, spanning from the years 2000 to 2024. It collects every minute via satellites. Solar wind data is taken one AU away right outside the bow shock of the magnetosphere. A variety of measurements are then put into one data set resulting in the data set.
+# To pre-process the data, the first thing that was done was creating a datetime array so we’d have a more legible version of time data to plot alongside the original data. We’d then assign all the columns into separate arrays with easier to use names than indexing into the OMNI table. Then, all pieces of data besides the DST index and the time array were filtered to ensure they contained no values that passed the threshold limit and those that did were assigned ‘NaN’.
+#
+# Nasa/Goddard Space Flight Center, “Coordinated Data Analysis Web,” Available: https://cdaweb.gsfc.nasa.gov/  [Accessed: April 02, 2025]
+# Nasa/Goddard Space Flight Center, ‘OMNIWeb,” Available: https://omniweb.gsfc.nasa.gov/html/about_data.html [Accessed: April 02, 2025]
 #
 # ----
 #
@@ -56,6 +73,7 @@ tconvert = lambda x: dt.datetime.strptime(str(x), '%Y-%m-%dT%H:%M:%S.%fZ')
 # reads the OMNI data into arrays
 data = np.genfromtxt('OMNI2_20002024.csv', names=True, delimiter=',', skip_header=97, encoding='utf-8',converters={0:tconvert}, dtype=None)
 
+#Assign variables from full data table to easier to call variables.
 time = data['TIME_AT_CENTER_OF_HOUR_yyyymmddThhmmsssssZ']
 swavgB = np.array(data['1AU_IP_MAG_AVG_B_nT'], dtype = float)
 swvelocity = np.array(data['1AU_IP_PLASMA_SPEED_Kms'], dtype = float)
@@ -406,14 +424,14 @@ fig.tight_layout()
 #
 # For the DST data, we turn to the literature for a suggested cutoff below which there is a storm indicative of a solar event.  Palacios et. al. 2018 lists values of -75 nT, -150 nT, and -330 nT as common values of thresholds for moderate, intense, and extreme geomagnetic storms respectively.  We will start by assessing our results using the -75 nT threshold for the DST index.  
 #
-# For our solar wind parameters, our initial intuition was to turn to the literature as well; however, since we subtracted out our dominant frequencies, our filtered data is no longer representative of the physical values.  Thus, we instead examined the April, 2023 CME from the "Organizing and Understanding our Data" section, and selected starting values for our solar wind parameter cutoffs based on this event.  The initial cutoffs we used were the following: 15 nT for the average magnetic field, 15 ions per cc for the ion number density, 550 km/s for the solar wind velocity, 10 nPa for the solar wind pressure, and 750,000 K for the solar wind temperature.
+# For our solar wind parameters, our initial intuition was to turn to the literature as well; however, since we subtracted out our dominant frequencies, our filtered data is no longer representative of the physical values.  Thus, we instead examined the April, 2023 CME from the "Organizing and Understanding our Data" section, and selected starting values for our solar wind parameter cutoffs based on this event.  The initial cutoffs we used were the following: 15 nT for the average magnetic field, 15 ions per cc for the ion number density, 550 km/s for the solar wind velocity, 10 nPa for the solar wind pressure, and 750,000 K for the solar wind temperature. Since not all events are perfect and impact every parameter of the solar wind, we changed the event identification so an event is recorded as happening if 3 of the 5 thresholds are met.
 
 # %% [markdown]
 # ### Identifying Events Hourly
 #
 # Determine whether or not an event is occurring for each index one by one.
 #
-# Initially, we used a window size of one hour.  In other words, we simply check each index and compile a list for each index of whether or not there is an event.  However, there are a couple of issues with this.  Firstly, it would be erroneous to treat events which last for more than one hour as a number of distinct, separate ones.  Secondly and most importantly, not all of the parameters are affected equally by an event.  Namely, the average magnetic field, solar wind velocity, and DST index are affected over a longer period of time than plasma flow pressure, plasma temperature, and ion number density which are affected over a shorter period.  Thus, there are indices for which the DST index is still affected, only two out of five of the solar wind parameters are still impacted by the event, and our comparison will suggest that our method failed to identify a solar event, as indicated by the DST index.
+# Initially, we used a window size of one hour.  In other words, we simply check each index and compile a list for each index of whether or not there is an event.  However, there are a couple of issues with this.  Firstly, it would be erroneous to treat events which last for more than one hour as a number of distinct, separate ones.  Secondly and most importantly, not all of the parameters are affected equally by an event.  Namely, the average magnetic field, solar wind velocity, and DST index are affected over a longer period of time than plasma flow pressure, plasma temperature, and ion number density which are affected over a shorter period.  Thus, there are indices for which the DST index is still affected, only three out of five of the solar wind parameters are still impacted by the event, and our comparison will suggest that our method failed to identify a solar event, as indicated by the DST index.
 
 # %%
 #every hour
@@ -441,6 +459,10 @@ for i in range(swavgB_filt.size):
         swEvent[i] = True
     else:
         swEvent[i] = False
+
+# %%
+print(f'Total Events identified by DST Index: {(sum(dst_events))}')
+print(f'Total Events identified by solar wind parameters: {(sum(swEvent))}')
 
 
 # %% [markdown]
@@ -583,7 +605,7 @@ fig.tight_layout()
 #
 # Binary Event Analysis takes two arrays that are both in binary form and compares them, creating a matrix of values organized into sections of True positives, False positives, True negatives, and False negatives. By creating this matrix, the user is able to compare the two lists and determine correlation. 
 #
-# This type of analysis great for simplifying the data and classifying the prediction of extreme events. This was very applicable to our analysis because we wished to see just how good our data was at predicting events once the periodicities were removed. Binary event analysis also allows for the use of Receiver Operating Characteristic style analysis, which compares True positives to False positives. This topic will be discussed in detail later in the document.
+# This type of analysis is great for simplifying the data and classifying the prediction of extreme events. This was very applicable to our analysis because we wished to see just how good our data was at predicting events once the periodicities were removed. Binary event analysis also allows for the use of Receiver Operating Characteristic style analysis, which compares True positives to False positives. This topic will be discussed in detail later in the document.
 #
 # ## The Function and its Functionality
 #
@@ -675,7 +697,6 @@ def binary_event_analysis(list1, list2, printit = True):
     if printit:
         print(f"Heidke Skill Score: {HSS:.4f}")
     
-    if printit:
         plt.figure(figsize=(6, 4))
         
         plt.imshow(contingency_table, cmap="RdPu", vmin=0, vmax=200)
@@ -718,7 +739,7 @@ def binary_event_analysis(list1, list2, printit = True):
 #
 # Once the values of both arrays were reduced to 0/1 values depending on if an event occured, we compared the Solar data to our DST data and created a confusion matrix to represent our results. We decided to calculate a couple other statistics as listed below, such as the correlation between the two arrays, the precision, the recall, and Heidke’s Skill Score. 
 #
-# The correlation explains how closely our an analyzed solar data follows the DST data, the precision calculates the amount of positive values that we predicted correctly, recall calculates, out of the amount of actual positives, how many events did we correctly predict, and Heidke’s Skill Score shows how much better our predictions are from random chance.
+# The correlation explains how closely our an analyzed solar data follows the DST data, the precision calculates the fraction of predicted positive values that we predicted correctly, recall calculates, out of the amount of actual positives, the fraction we correctly predicted, and Heidke’s Skill Score shows how much better our predictions are from random chance.
 
 # %%
 #Run the binary event analysis function on our dst event and solar wind event lists
@@ -727,7 +748,7 @@ print(binary_event_analysis(dst_binary, sw_binary))
 # %% [markdown]
 # **THIS SUCKS AND NEEDS TO BE EDITED**
 #
-# The range for Heidke’s Skill Score is from -1 to 1, with 0 representing random chance. Our values were a correlation of 0.4446, a precision of 0.5307, a recall of 0.5135, and a Hedike skill score of 0.4445. These values show that while our process of identifying these events using the solar data does work better than random chance, it is not necessarily the best. Similarly, our hit rate was 0.5135 and our false alarm rate was 0.0750, which shows our process is great at not predicting events when they did not happen, but not the best at predicting when they did. 
+# The range for Heidke’s Skill Score is from -1 to 1, with 0 representing random chance. Our values were a correlation of 0.4446, a precision of 0.5307, a recall of 0.5135, and a Hedike skill score of 0.4445. These values show that while our process of identifying these events using the solar data does work better than random chance, it is not necessarily the best. Similarly, our hit rate was 0.5135 and our false alarm rate was 0.0750, which shows our process is great at not predicting events when they did not happen, but not the best at predicting when they did.  While our accuracy is 88%, this value is inflated by the large number of correct negatives.
 #
 #
 # ADD More anslysis about what the numbers mean    -- start with overall accuracy and then explain more about what each number represnts
@@ -749,6 +770,7 @@ for window_size in range (4,8):
     swcutoffs2 = [15, 20, 10, 7.5*10**5, 550]
     # high thresholds
     swcutoffs3 = [20, 25, 12, 8*10**5, 600]
+    # gets the binary for the window size and cutoffs for trial
     sw_binary1 = calc_sw_binary(window_size, swcutoffs1)
     sw_binary2 = calc_sw_binary(window_size, swcutoffs2)
     sw_binary3 = calc_sw_binary(window_size, swcutoffs3)
@@ -768,15 +790,15 @@ for window_size in range (4,8):
 #
 # ### What are LHS and ROC?
 #
-# Latin hypercube Sampling is a smart sampling technique to explore multidimensional parameter spaces. It takes each parameters range and ensures that each interval is sampled once. Since we would have had an output of thousands of points, using LHS allows us to cut this down to 200 points that is still representative of our data.    
+# Latin hypercube Sampling is a smart sampling technique to explore multidimensional parameter spaces. It takes each parameters range and ensures that each interval is sampled once.  This technique minimizes the gaps between points in the parameter space. With a thorough grid search approach we would have had an output of thousands of points, and with random sampling we could've ended up with random unexplored regions in the parameter space.  Using LHS allows us to cut this down to 200 points that are still representative of our data.    
 #
-# ROC curves are used to evaluate binary classification performance which shows the true positive rate vs the false positive rate. We chose to combine these two ideas and produce a plot that is representative of many possible combinations
+# ROC curves are used to evaluate binary classification performance with different thresholds for a parameter and show the true positive rate vs the false positive rate. We chose to combine these two ideas and produce a plot that is representative of many possible combinations of our parameters.
 #
 
 # %% [markdown]
 # ### Our Function and its Functionality
 # *Note: takes a while to load*     
-# The code explores a wide range of threshold combinations using Latin Hypercube Sampling, a method that ensures broad coverage of the parameter space with a limited number of trials. For each combination, the model classifies time periods as either containing a storm event or not, based on whether certain solar wind values exceed specified thresholds. These predictions are then compared against actual DST-based events to compute hit rates and false alarm rates. Ultimately, this analysis helps determine which parameter combinations are best at capturing true geomagnetic activity while minimizing false positives. The results are visualized in a ROC-style plot, with the top-performing configurations highlighted, providing insight into which solar wind features are most predictive of space weather disturbances.    
+# The code explores a wide range of threshold combinations using Latin Hypercube Sampling, a method that ensures broad coverage of the parameter space with a limited number of trials. For each combination, the model classifies time periods as either containing a storm event or not, based on whether certain solar wind values exceed specified thresholds. These predictions are then compared against actual DST-based events to compute hit rates and false alarm rates. Ultimately, this analysis helps determine which parameter combinations are best at capturing true geomagnetic activity while minimizing false positives. The results are visualized in a ROC-style plot, with the top-performing configurations highlighted, providing insight into which solar wind features are most predictive of space weather disturbances. 
 
 # %%
 window_day = timedelta(days=1) #start with 1 day window
@@ -844,7 +866,7 @@ param_lists = {
 keys = list(param_lists.keys()) #hold parameters
 #the seed argument keeps the numpy.random.Generator consistent when re-running the cell on the same machine
 # results may vary across different computers
-sampler = qmc.LatinHypercube(d=len(keys), seed=23) #do the latinhypercube
+sampler = qmc.LatinHypercube(d=len(keys), seed=16) #do the latinhypercube
 samples = sampler.random(n=200) #hold samples
 
 hrs, fars, combos = [], [], []
@@ -907,6 +929,47 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
     print(f" False Alarm Rate: {far:.3f}")
 
 # %% [markdown]
+# **We produced the following results when running the LHS on our machine.  Because the sampling is randomized, you may have different results despite us using a seed argument in our function.  Our analysis will be based on the values listed below for reference.**
+#
+# Top 3 parameter combos (high HR, low FAR):
+#
+# Rank 1:
+#  Window size: 7 days
+#  DST cutoff: -75 nT
+#  B cutoff: 30
+#  Density cutoff: 15
+#  Pressure cutoff: 20
+#  Temp cutoff: 1000000.0
+#  Velocity cutoff: 800
+#  Hit Rate: 0.947
+#  False Alarm Rate: 0.125
+#
+# Rank 2:
+#  Window size: 5 days
+#  DST cutoff: -75 nT
+#  B cutoff: 30
+#  Density cutoff: 15
+#  Pressure cutoff: 20
+#  Temp cutoff: 750000.0
+#  Velocity cutoff: 800
+#  Hit Rate: 0.840
+#  False Alarm Rate: 0.104
+#
+# Rank 3:
+#  Window size: 3 days
+#  DST cutoff: -75 nT
+#  B cutoff: 30
+#  Density cutoff: 5
+#  Pressure cutoff: 20
+#  Temp cutoff: 750000.0
+#  Velocity cutoff: 800
+#  Hit Rate: 0.828
+#  False Alarm Rate: 0.069
+
+# %% [markdown]
+#
+
+# %% [markdown]
 # ### ROC-Style LHS: Our Data's Outcome
 #
 # Our plot and results are shown above. For simplicity, the top three parameter combinations are labeled by the function. As you can see, any of these options was much better than those chosen by us in our original analysis, as seen by the hit rate vs false alarm rate. Of course there were several things that were not considered here, such as Heidke’s Skill Score, so in the future more analysis would be beneficial.  
@@ -917,6 +980,7 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 # %% [markdown]
 # ## Conclusions and Next Steps
 # Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
+#
 # ## References
 #
 
@@ -950,6 +1014,9 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 
 # %% [markdown]
 # ### Roles & Contributions
+
+# %% [markdown]
+# Therapy Dog Nico (therapydognico@umich.edu): emotional support & code consulting
 
 # %% [markdown]
 #
