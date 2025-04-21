@@ -609,7 +609,7 @@ fig.tight_layout()
 #
 # ## The Function and its Functionality
 #
-# ADD ANALYSIS HERE
+# # ADD ANALYSIS HERE
 
 # %%
 def binary_event_analysis(list1, list2, printit = True):
@@ -746,12 +746,7 @@ def binary_event_analysis(list1, list2, printit = True):
 print(binary_event_analysis(dst_binary, sw_binary))
 
 # %% [markdown]
-# **THIS SUCKS AND NEEDS TO BE EDITED**
-#
-# The range for Heidke’s Skill Score is from -1 to 1, with 0 representing random chance. Our values were a correlation of 0.4446, a precision of 0.5307, a recall of 0.5135, and a Hedike skill score of 0.4445. These values show that while our process of identifying these events using the solar data does work better than random chance, it is not necessarily the best. Similarly, our hit rate was 0.5135 and our false alarm rate was 0.0750, which shows our process is great at not predicting events when they did not happen, but not the best at predicting when they did.  While our accuracy is 88%, this value is inflated by the large number of correct negatives.
-#
-#
-# ADD More anslysis about what the numbers mean    -- start with overall accuracy and then explain more about what each number represnts
+# The Heidke skill score is a value between -1 and  1, where 0 is random chance. The more positive the score, thebettere the results. The value’s correlation of 038276, a precision of 040867, and a recall of 048855. The correlation tells us how associated our variables are, ours suggests a judgement of somewhat related  Precision is the ratio between the number of true positives and the total number of positives predicted, and is a measure of the quality of the predictions.  In other words, when your model predicts an event, how reliable is this prediction?  Our precision value is 0.41, which tells us that more than half of the events our model predicted were not real events, is not particularly good.  Additionally, we have recall.]Recall is the ratio between the number of true positives and the number of total observed events, and can be thought of as a measure of quantity.  In other words, out of the total number of real events, what fraction of them was your model able to predict?  Our recall value was 0.48, indicating that our model only predicted slightly less than half of the observed events, which again means our model did not do particularly well. This brings us to our Heidke  skill score of 0.4445. While the Heidke skill score indicates that how we identified events worked better than random chance, there is still a noticeable amount of error. Related are the hit rate of 0.5135 and false alarm rate of 0.0750. The false alarm rate being so low shows that our process only rarely predicted events when they did not happen. The hit rate is also low, this gets to the core of the problem. Our process only finds an event about half the time but only rarely predicts an event when there is not an event, skewing our accuracy to 88% due to all the true negatives.
 
 # %% [markdown]
 # ### Running Binary Event Analysis with Different Values
@@ -763,7 +758,7 @@ dstcutoff = -75 #nT
 # for loop that gets skill score for 4-7 day window sizes and 3 different solar wind parameter thresholds for each
 for window_size in range (4,8):
     # gets dst for the windowsize
-    dst_binary = calc_dst_binary(window_size, cutoff)
+    dst_binaryc = calc_dst_binary(window_size, dstcutoff)
     # low thresholds
     swcutoffs1 = [10, 15, 7.5, 5*10**5, 500]
     # medium thresholds
@@ -775,9 +770,9 @@ for window_size in range (4,8):
     sw_binary2 = calc_sw_binary(window_size, swcutoffs2)
     sw_binary3 = calc_sw_binary(window_size, swcutoffs3)
     print(f'Window size: {window_size} days')
-    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binary, sw_binary1, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binary, sw_binary1, False)["proportion_correct"]:.6f}  for low solar wind thresholds')
-    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binary, sw_binary2, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binary, sw_binary2, False)["proportion_correct"]:.6f}  for day window and medium solar wind thresholds')
-    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binary, sw_binary3, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binary, sw_binary3, False)["proportion_correct"]:.6f}  for day window and high solar wind thresholds')
+    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binaryc, sw_binary1, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binaryc, sw_binary1, False)["proportion_correct"]:.6f}  for low solar wind thresholds')
+    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binaryc, sw_binary2, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binaryc, sw_binary2, False)["proportion_correct"]:.6f}  for day window and medium solar wind thresholds')
+    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binaryc, sw_binary3, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binaryc, sw_binary3, False)["proportion_correct"]:.6f}  for day window and high solar wind thresholds')
 
 
 # %% [markdown]
@@ -825,7 +820,29 @@ for i in range(n_windows_1d):  #loop over each day-index from 0 to the number of
 #say if the event occured or not
 def compute_events(window_days, dst_cut, sw_cuts, sw_thresh=3):
     '''
-    DOC STRING
+    Identify geomagnetic and solar-wind events over non-overlapping windows
+
+    Parameters
+    ---------
+    window_days : int
+        Length of each aggregation window in days.
+    dst_cut : float
+        Threshold for the DST index. A window is flagged as a DST event if the minimum daily 
+        DST value in the window falls below the cuttoff.
+    sw_cuts: array-like of length 5
+        Thresholds for the five solar wind parameters. A window is flagged as a solar wind event
+        if at least 'sw_thresh' of these parameters exceed their respective cutoff.
+    sw_thresh : int
+        Minimum number of solar wind parameters that must exceed their cuts to count as a 
+        solar-wind event. Default is 3.
+    
+    Returns
+    ---------
+    dst_ev : ndarray of bool, shape (n_intervals,)
+        Boolean array indicating, for each window, whether a DST event occured.
+    sw_ev : ndarray of bool, shape (n_intervals,)
+         Boolean array indicating, for each window, whether a solar-wind event occured.
+
     '''
     step = window_days
     n_int = math.ceil(n_windows_1d / step) #find how many sections of the windowed days fit in the whole space
@@ -841,7 +858,27 @@ def compute_events(window_days, dst_cut, sw_cuts, sw_thresh=3):
 #convert the booleans into hit rate/false alarm rate
 def get_rates(dst_ev, sw_ev):
     '''
-    DOC String
+    Compute classification performance metrics: hit rate and false alarm rate.
+
+    Parameters
+    ----------
+    dst_ev : array of bool
+        Boolean array indicating observed DST events (TRUE = event occured).
+    sw_ev : array of bool
+        Boolean array indicating predicted solar-wind events (TRUE = event predicted).
+
+    Returns 
+    -------
+    hit rate : float
+        The proportion of actual events that were correctly predicted: 
+        Returns np.nan if there are no actual events
+    false_alarm_rate : float
+        The proportion of non-events that were incorrectly predicted as events:
+        Returns np.nan if there are no non-events.
+
+    Notes
+    ------
+     - Both input arrays must have the same length.
     '''
     a = np.sum(dst_ev & sw_ev)
     b = np.sum(dst_ev & ~sw_ev)
@@ -933,41 +970,20 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 #
 # Top 3 parameter combos (high HR, low FAR):
 #
-# Rank 1:
-#  Window size: 7 days
-#  DST cutoff: -75 nT
-#  B cutoff: 30
-#  Density cutoff: 15
-#  Pressure cutoff: 20
-#  Temp cutoff: 1000000.0
-#  Velocity cutoff: 800
-#  Hit Rate: 0.947
-#  False Alarm Rate: 0.125
-#
-# Rank 2:
-#  Window size: 5 days
-#  DST cutoff: -75 nT
-#  B cutoff: 30
-#  Density cutoff: 15
-#  Pressure cutoff: 20
-#  Temp cutoff: 750000.0
-#  Velocity cutoff: 800
-#  Hit Rate: 0.840
-#  False Alarm Rate: 0.104
-#
-# Rank 3:
-#  Window size: 3 days
-#  DST cutoff: -75 nT
-#  B cutoff: 30
-#  Density cutoff: 5
-#  Pressure cutoff: 20
-#  Temp cutoff: 750000.0
-#  Velocity cutoff: 800
-#  Hit Rate: 0.828
-#  False Alarm Rate: 0.069
+# |          Rank          	|   Rank 1  	|   Rank 2  	|  Rank 3  	|
+# |:----------------------:	|:---------:	|:---------:	|:--------:	|
+# |       Window Size      	|   7 Days  	|   5 Days  	|  3 Days  	|
+# |       DST Cutoff       	|   -75 nT  	|   -75 nT  	|  -75 nT  	|
+# | Average B Field Cutoff 	|   30 nT   	|   30 nT   	|   30 nT  	|
+# |     Density Cutoff     	| 15 per cc 	| 15 per cc 	| 5 per cc 	|
+# |     Pressure Cutoff    	|   20 nPa  	|   20 nPa  	|  20 nPa  	|
+# |   Temperature Cutoff   	| 1000000 K 	|  750000 K 	| 750000 K 	|
+# |     Velocity Cutoff    	|  800 km/s 	|  800 km/s 	| 800 km/s 	|
+# |        Hit Rate        	|   0.947   	|   0.840   	|   0.828  	|
+# |    False Alarm Rate    	|   0.121   	|   0.104   	|   0.069  	|
 
 # %% [markdown]
-#
+# Across the top three parameter combination sets, a pattern emerges: requiring a high magnetic field (B >= 30 nT) with a moderate DST threshold (-75 nT) consistently yields the best predictive skill. In Rank 1, using a 7-day aggregation window and the highest temperature cutoff (1,000,000 K) delivers the highest hit rate (94.7%) but at the expense of a somewhat elevated false alarm rate (12.5 %). Shortening the window to 5 days (Rank 2) lowers both the hit rate (84.0%) and false alarm rate (10.4%), while further reducing the window to 3 days (Rank 3) continues this trend (82.8% hit rate, 6.9% false alarm rate). This trade-off suggests that longer windows imporve the chance of capturing true geomagnetic storm onsets, but also increase the risk of spurious alerts. Conversely, shorter windows yield fewer false positives but fail to detect a small fraction of genuine events. The fact that Rank 3 compensates for its shorter window by lowering the density cutoff to 5 ions per cc underlines the importance of particle density as a secondary predictor when temporal aggregation is reduced. Overall, if maximum event detection is the priority and a modest false alarm rate is acceptable, a 7-day window with stringent solar wind threshold is recommended; if minimizing false alarm rates is more critical, a 3-to-5-day window paired with slightly relaxed density or temperature thresholds may be preferable.
 
 # %% [markdown]
 # ### ROC-Style LHS: Our Data's Outcome
@@ -979,10 +995,11 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 
 # %% [markdown]
 # ## Conclusions and Next Steps
-# Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
 #
+# TThe first conclusion we can make is that the solar wind does follow periodic behavior. Specifically solar wind wind follows period behavior that aligns with the solar cycle and the solar rotation cycle. By removing these dominant frequencies, the data is then filtered from the natural cycle of the solar wind so outliers can be found or solar events.
+
+# %% [markdown]
 # ## References
-#
 
 # %% [markdown]
 #
@@ -1013,10 +1030,20 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 # [13]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Z. Bobbitt, “What is Latin Hypercube Sampling?,” statology.org, Sept 13, 2020. [Online]. Available: https://www.statology.org/latin-hypercube-sampling/ [Accessed: April 16, 2025].
 
 # %% [markdown]
-# ### Roles & Contributions
+# ## Roles & Contributions
 
 # %% [markdown]
-# Therapy Dog Nico (therapydognico@umich.edu): emotional support & code consulting
+# Nico the Therapy Dog 😍🐶 (DPSS - certified therapy dog) (therapydognico@umich.edu): Emotional support & code consulting thanks to the CLASP Destress week.
+#
+# Elise 💗: Plotting all data, plotting 4/23/23 CME data, power spectrum plots, finding dominant frequencies, ifft/removing frequencies, trying binary analysis with different windows sizes and solar wind threshold, and making majority of plots pink. 
+#
+# Natalie 💗: Assisted Elise in finding/removing dominant frequencies, wrote binary event analysis code, introduced the idea of ROC-Style LHS and coded the function, analyzed the outcome of the binary event analysis and ROC-Style LHS 
+#
+# Percy 💗: Wrote the introduction, created citations, laid out majority of presentation, and generally reviewed and edited text.
+#
+# Daniel 💗: Helped with background research and context. Identifying events in the dst and filtered solar wind data.  Figuring out binary event analysis and sampling (credit to natalie for the code for this).
+#
+# +Dan points for continued theme?
 
 # %% [markdown]
 #
