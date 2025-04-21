@@ -16,45 +16,41 @@
 # ---
 
 # %% [markdown]
-# ### Helpful resources:
-# * [Guide to Markdown](https://paperhive.org/help/markdown)
-# * [Guide to LaTeX Math symbols](http://tug.ctan.org/info/undergradmath/undergradmath.pdf)
-# * [Python Cheat Sheets](https://ehmatthes.github.io/pcc/cheatsheets/README.html)
-# * [Moving to Python from MATLAB](https://bastibe.de/2013-01-20-a-python-primer-for-matlab-users.html)
+# # **Solar WIN(d)**
 #
-# ### Template for lab report:
-# * **Title:** Name the lab that this report is for
-# * **Collaborators:** Team work on labs is encouraged, but everyone is required to turn in their own lab report. Please list your collaborators in the intro to the report.
-# * **Goal and Introduction:** Add a brief description of the goal and background knowledge for the lab. This can be drawn from the lab description, but should be in your own words.
-# * **Data:** List the datasets used, what they describe and any quality/pre-processing before analysis.
-# * **Approach and Results:** Describe your approach for each question in the lab description and interpretation of the results for that question.
-# * **Conclusions:** Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
-# * **References:** Cite any resources or publications you used.
-# ---
-# # Final Project
 # ### Elise Segal, Daniel Heilmen, Natalie Giovi, Percy Slattery
 #
-# ## Goal and Introduction
+# ## Introduction & Approach
 # Add a brief description of the goal and background knowledge for the lab. This can be drawn from the lab description, but should be in your own words.
 #
 # ## Data
 # List the datasets used, what they describe and any quality/pre-processing before analysis.
 #
 # ----
-# ## Approach and Results
-# Describe your approach for each question in the lab description and interpretation of the results for that question.
-# Start with an over-arching paragraph to describe your approach as you see fit.
+#
 
 # %% [markdown]
-# ## Data Collection
-# Start by importing the data from OMNI. We used a csv file and data from 2000 to 2024 to show 2 solar cycles. From OMNI we chose hourly data because trying to get minute data from OMNI takes too long to upload into a notebook. From OMNI, we retrieved time of the measurement, the average magnetic field at 1 AU, the solar wind speed at 1 AU, the solar wind pressure at 1 AU, the solar wind temperature at 1 AU, the solar wind density at 1 AU and the DST Index from stations around the equator on the surface of the Earth.
+# # Import Relevant Libraries  
 
 # %%
 # imports the libraries needed for the project
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta
+from scipy.fftpack import fft, ifft, fftfreq
+from scipy.signal import butter, filtfilt
+import math
+from scipy.stats import qmc
 
+# %% [markdown]
+# # Data Collection    
+#
+# ## Selection   
+# Start by importing the data from OMNI. We used a csv file and data from 2000 to 2024 to show 2 solar cycles. From OMNI we chose hourly data because trying to get minute data from OMNI takes too long to upload into a notebook. From OMNI, we retrieved time of the measurement, the average magnetic field at 1 AU, the solar wind speed at 1 AU, the solar wind pressure at 1 AU, the solar wind temperature at 1 AU, the solar wind density at 1 AU and the DST Index from stations around the equator on the surface of the Earth.
+
+# %%
 # time converter to datetime object for the OMNI data
 tconvert = lambda x: dt.datetime.strptime(str(x), '%Y-%m-%dT%H:%M:%S.%fZ')
 # reads the OMNI data into arrays
@@ -69,6 +65,7 @@ swdensity = np.array(data['1AU_IP_N_ION_Per_cc'], dtype = float)
 dst = np.array(data['1H_DST_nT'], dtype = float)
 
 # %% [markdown]
+# ## Cleaning Real World Data   
 # Due to OMNI being real world data there are some times where there was no measurements and OMNI records these not as Nans but as the highest order minus 1. Therefore, to prevent these numbers from being read, we filtered them out using different thresholds of the max value each of the types of parameters can have.
 
 # %%
@@ -83,7 +80,8 @@ for array, threshold in zip(arrays, filters):
             array[index] = np.nan
 
 # %% [markdown]
-# First step is to visualize the data to ensure some periodic behavior exists for the fft.
+# ## Organizing and Understanding our Data
+# First step is to visualize the data to ensure some periodic behavior exists for the fft. This is done by creating a dictionary to correlate all of the data with proper labeling for the graphs and making all the plots through a for loop.
 
 # %%
 # correlates data to labels
@@ -110,7 +108,7 @@ fig.tight_layout()
 #
 
 # %% [markdown]
-# While the most notable solar events from the plots during solar maximums, it is not the best example to show how solar wind parameters behave during a CME. This is because the they are major storms that could have been the result of multiple CMEs back to back (cannibal CME). Therefore we decided to go with the April 23rd, 2023 storm which was the result on a single CME to showcase how solar wind changes during a solar event.
+# While the most notable solar events from the plots during solar maximums, it is not the best example to show how solar wind parameters behave during a CME. This is because the they are major storms that could have been the result of multiple CMEs back to back (cannibal CME). Therefore we decided to go with the April 23rd, 2023 storm which was the result on a single CME to showcase how solar wind changes during a solar event. This was plotted using the same technique as for plotting the entire dataset but then added a x axis limit to focus on the dates around the 4/23/23 storm.
 
 # %%
 # creates a new figure for plots
@@ -135,16 +133,28 @@ fig.tight_layout()
 # During a CME the magnetic field at 1 AU increases at the arrival of the CME and conitnues to increase before decreasing after the passing of the CME. The solar wind velocity also increases when the storm arrives before decreasing slightly again and remaining steady. There is a small peak in the solar wind pressure, density and temperature at the arrival of the CME before it decreases again. Lastly, the DST Index decreases to negative during the CME before recovering. This behavior matches the the structure of a CME. Typically a CME will have a shock associated with where the fast solar wind from the CME over takes the slow solar wind in front forming the shock. However, there does not have to be a shock associated with the CME. This causes an increase in solar wind speed when the shock and CME reach Lagrange point 1. Since the shock is at the beginning there is a bigger increase at the start of the CME before decreasing a little while the magnetic cloud of the CME passes. In the magnetic cloud of a CME there is a magnetic field as the name suggests. However the magnetic cloud mainly contains the magnetic cloud and nothing else. Therefore, the magnetic field should increase at the arrival of the shock and continue to increase and stay at a higher value during the passing of the magnetic cloud. However the solar wind parameter should increase at the arrival of the shock due to the compression of the solar wind but then drop during the passing of the magnetic cloud which is seen with the April 23rd storm of 2023. Lastly the DST measures the impact of the magnetic field on Earth surface with Earth's magnetic field therefore is showcases the opposite effect of Lagrange point 1 by decreasing due to the CME before recovering back to around 0 nT.
 
 # %% [markdown]
-# Next step is to do the fft however the fft cannot have any NaN values. To start we created an interpolate function that replaces any NaN values with values similar that are around it allowing us to proceed with the fft and ifft later. Then we created a function that takes the fft and returns arrays allowing us to plot the power spectrum.
+# # Removing Solar Wind Periodicities
+#
+# ## FFT Analysis   
+# Next step is to do the fft however the fft cannot have any NaN values. To start we created an interpolate function that replaces any NaN values with values similar that are around it allowing us to proceed with the fft and ifft later. Then we created a function that takes the fft and returns arrays with the frequencies and power from the fourier transform to plot the power spectrums. This was done with the scipy fftpack learned in class.
 
 # %%
-from scipy.fftpack import fft, ifft, fftfreq
-from scipy.signal import butter, filtfilt
-import numpy as np
-import matplotlib.pyplot as plt
-
 # Helper function: interpolate missing (NaN) values in the time series using linear interpolation
 def interpolate_nan(y):
+    '''
+    This function interpolate missing (NaN) values in the time series using linear interpolation so the fft and ifft can be computed.
+    
+    Parameters
+    ----------
+    y:array
+        The array that needs to be interpolated
+        
+    Returns
+    -------
+    y: array
+        The final array with interpolated values and no NaN values.
+ 
+    '''
     nans = np.isnan(y)                          # Identify NaN positions
     not_nans = ~nans                            # Identify valid (non-NaN) positions
     x = np.arange(len(y))                       # Create an index array
@@ -152,6 +162,30 @@ def interpolate_nan(y):
     return y
 
 def analyze_fft(data, dt_hours=1, top_k=6):
+    '''
+    This functions calculates the fft for the data according to the given time period and then returns all the need information from the fft to later make a power spectrum plot.
+    
+    Parameters
+    ----------
+    data:array
+        The array of data to calculate the fft from 
+    dt_hours:int
+        The time step of the data to get the right units for the frequencies - set at 1 for 1 day in 24 to get cycles per day
+    top_k:int
+        The number of top harmonics to be recorded. 
+        
+    Returns
+    -------
+    freq: array
+        An array with all the frequencies retrieved from the fourier transform.
+    power:array
+        The powers corresponding to all the frequencies from the fourier transform 
+    n:int
+        The length of the data array
+    harmonics:array
+        Array of dictionaries with the top top_k frequencies and the corresponding amplitude, period in days and the harmonic index.  
+ 
+    '''
     # Interpolate NaNs and prepare data
     y = interpolate_nan(data.copy())
     dt_days = dt_hours / 24
@@ -187,12 +221,27 @@ def analyze_fft(data, dt_hours=1, top_k=6):
     return freq, power, n, harmonics
 
 def sort_harmonics_amp(harmonics):
+    '''
+    Sorts the harmonic array generated from the analyze_fft to be in order of highest amplitude
+    
+    Parameters
+    ----------
+    harmonics:array
+        The array of harmonics to be sorted
+        
+    Returns
+    -------
+    sorted_h: array
+        The array of sorted harmonics
+ 
+    '''
     sorted_h = sorted(harmonics, key=lambda h: h['amplitude'], reverse=True)
     return sorted_h
 
 
 # %% [markdown]
-# Plots the power spectrums for each parameter and finds the top 5 dominant frequencies in each parameter. The dominant frequencies are found by finding the max power and then the corresponding frequency and adding it to an array then deleting that value and finding the new max.
+# ## Finding the Dominant Frequencies
+# Plots the power spectrums for each parameter and finds the top 5 dominant frequencies in each parameter. The dominant frequencies are found by finding the max power and then the corresponding frequency and adding it to an array then deleting that value and finding the new max. This is done using the same method of plotting with a dictionary correlating labels with the data and a for loop. The fft is preformed in the for loop that is then plotted for the power spectrums.
 #
 
 # %%
@@ -222,16 +271,24 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
 
 fig.tight_layout()
 
+# %% [markdown]
+# From the power spectrums several dominant frequencies are observed. Specifically, there are several peaks showing high power frequencies for the solar wind velocity, temperature and ion number density. The remain power spectrums do not showcase as prevelant dominant frequencies in their power spectrums. Of the ones clearly showing several dominant frequencies, there are around 5 well define peaks for dominant frequencies that appear to be in the same place as the other parameters.
+
+# %% [markdown]
+# To get the specific dominant frequencies, the sorted_amps function gets the the top 6 the output isn't formatted in the best way for readablility. So still using a for loop to go through the dictionary, the top five dominant frequencies are found by finding the max power and corresponding frequency and then removing it to find the next max for dominant frequencies. The dominant frequencies is then printed in cycles per day and then the corresponding period in days and years for better understanding of the dominant cycles shown in the solar wind. *Note: Does print a lot of lines so it might be truncated, switch to scrollable element to see full output of the print statements.*
+
 # %%
 #arrays for storing the dominant frequencies
 dom_amps = []
 dom_freqs = []
 
-for ax, (label, (x, i)) in zip(axes.flat, data.items()):
+# for loop to loop through all the parameters in the previous defined dictionary of data
+for (label, (x, i)) in data.items():
     freq, power, n, harmonics = analyze_fft(i)
     sorted_amps = sort_harmonics_amp(harmonics)
     freq = abs(freq)
-
+    # prints values from sorted amps
+    print(sorted_amps)
     dominant_frequencies = []
 
     # Loop to find the top 5 dominant frequencies
@@ -247,19 +304,22 @@ for ax, (label, (x, i)) in zip(axes.flat, data.items()):
         # delete max power to find second dominant frequency
         power = np.delete(power, dominant_idx)  
 
-    # Print the results
+    # Print the results in easy read format better than sorted_amps
     print(f'\n{title}:')
     for rank, freq in enumerate(dominant_frequencies, start=1):
         days = 1 / freq
         years = days / 365
         print(f'\t {rank} Dominant frequency: {freq:.4f} cycles per day (~{days:.2f} days or ~{years:.4f} years)')
+    print('')
 
 # %% [markdown]
 # Dominant frequencies that are repeated through multiple of the parameters are 12 years, 27 days and 9 days. The 12 years correlates to the solar cycle and the 27 days correlates to the solar rotation cycle so these as dominant frequencies is expected.
 #
 
 # %% [markdown]
-# Removes the dominant frequencies using a band pass filter and ifft. Removes all frequencies around 5 days of the 2 dominant frequencies in days and 3 months for the dominant frequency in years.
+# ## Removing the Dominant Frequencies
+#
+# Removes the dominant frequencies using a band pass filter and ifft. Removes all frequencies around 5 days of the 2 dominant frequencies in days and 3 months for the dominant frequency in years. First, new arrays are created to put in the new filtered data from the arrays. Then a for loop is used to remove the 3 frequencies and the ranges around them using masks after interpolating the data to ensure no NaN values. During the fft, the data is not normalized so the ifft can then be taken directly and the new filtered data is added to the empty arrays created in the beginning.
 #
 
 # %%
@@ -306,7 +366,7 @@ swtemp_filt = newarray[4]
 dst_filt = newarray[5]
 
 # %% [markdown]
-# Plots the new data with the dominant frequencies filtered out from the ifft band pass filter.
+# Plots the new data with the dominant frequencies filtered out from the ifft band pass filter. This is done using an updated dictionary with the new filtered values and a for loop to add the data labels to all the plots. The new filtered data is overlayed with the original data from OMNI to show the difference after removing the dominant frequencies.
 #
 
 # %%
@@ -332,20 +392,28 @@ for ax, (label, (x, y,filt)) in zip(axes.flat, data.items()):
 fig.tight_layout()
 
 # %% [markdown]
-# The solar wind speed appears to be the most impacted by the dominant frequencies removed as it shows the change from the original to the filtered data
+# The solar wind speed appears to be the most impacted by the dominant frequencies removed as it shows the change from the original to the filtered data. Overall, the filtered data condenses around the mean more.
 #
 
 # %% [markdown]
-# ## Data Analysis
-# *takes a while to load
+# ## Data Interpretation: Identifying Solar Events
+#
+# We will be using binary event analysis in order to measure the effectiveness of our model in identifying events in the solar wind.  However after filtering out our dominant frequencies, we are only left with a filtered spectra, and do not yet have a clear notion of when this spectra indicates that an event is occurring.  In order to perform binary event analysis on our data, we need a method for determining what constitutes an event detection in our spectra.  We can then apply this method to identify when our spectra predicts that one occurs, and apply this method to record, for a list of time intervals, whether there was an event during each time window.  In this way we reduce a complex set of filtered data into a simple binary “true” or “false”, hence the name “binary event analysis”.  
+#
+# We can compare our list identified with filtered solar wind data to a similar binary list for identical time intervals from the DST index data in order to assess how well our method was able to identify real events.  For the purposes of this analysis, we treat the DST index data as a reliable indicator of when solar events occurred, and the binary list of events identified from the DST data serves as our list of “observed” events in our binary analysis, against which we compare our “predicted” events identified from our solar wind data.  
+#
+# In order to determine whether or not an event occurred, we will use a set of cutoffs, with one for each of our six parameters.  When our data spikes above its respective threshold, or in the case of the DST data, drops below, we flag that as an event.  For our five solar wind parameters, we will consider there to have been a detection if three or more of the parameters are in agreement.  The challenge then is to select appropriate cutoffs for each of our parameters.  We will select a few values as a starting point for our analysis and, as explained later, move on to explore the parameter space a bit further and investigate how changes to the cutoffs and other parameters influence the performance of our event identification method.  
+#
+# For the DST data, we turn to the literature for a suggested cutoff below which there is a storm indicative of a solar event.  Palacios et. al. 2018 lists values of -75 nT, -150 nT, and -330 nT as common values of thresholds for moderate, intense, and extreme geomagnetic storms respectively.  We will start by assessing our results using the -75 nT threshold for the DST index.  
+#
+# For our solar wind parameters, our initial intuition was to turn to the literature as well; however, since we subtracted out our dominant frequencies, our filtered data is no longer representative of the physical values.  Thus, we instead examined the April, 2023 CME from the "Organizing and Understanding our Data" section, and selected starting values for our solar wind parameter cutoffs based on this event.  The initial cutoffs we used were the following: 15 nT for the average magnetic field, 15 ions per cc for the ion number density, 550 km/s for the solar wind velocity, 10 nPa for the solar wind pressure, and 750,000 K for the solar wind temperature.
 
 # %% [markdown]
-# ### Identifying DST Events
-
-# %%
-from dateutil.relativedelta import relativedelta
-from datetime import timedelta
-import math as math
+# ### Identifying Events Hourly
+#
+# Determine whether or not an event is occurring for each index one by one.
+#
+# Initially, we used a window size of one hour.  In other words, we simply check each index and compile a list for each index of whether or not there is an event.  However, there are a couple of issues with this.  Firstly, it would be erroneous to treat events which last for more than one hour as a number of distinct, separate ones.  Secondly and most importantly, not all of the parameters are affected equally by an event.  Namely, the average magnetic field, solar wind velocity, and DST index are affected over a longer period of time than plasma flow pressure, plasma temperature, and ion number density which are affected over a shorter period.  Thus, there are indices for which the DST index is still affected, only two out of five of the solar wind parameters are still impacted by the event, and our comparison will suggest that our method failed to identify a solar event, as indicated by the DST index.
 
 # %%
 #every hour
@@ -353,24 +421,6 @@ dst_events = np.zeros(len(dst))
 for i in range(len(dst)):
     if(dst[i] < -75):
         dst_events[i] = True
-
-# %%
-#Here we will create an array to hold our true
-dst_binary0 = np.zeros(math.ceil(len(time) / 120))
-window_size0 = timedelta(days=5)
-start, stop = time[0], time[-1]
-idx = 0
-while start + window_size0 < stop:
-    end = start + window_size0
-    locations = (time >= start) & (time < end)
-    subset = dst[locations]
-    if(np.min(subset) < -75):
-        dst_binary0[idx] = True
-    start += window_size0
-    idx += 1
-
-# %% [markdown]
-# ### Identifying Events in the Filtered Solar Wind
 
 # %%
 swEvent = np.empty(swavgB_filt.size)
@@ -393,87 +443,68 @@ for i in range(swavgB_filt.size):
         swEvent[i] = False
 
 
-# %%
-#here we will perform our binary event analysis on the Solar Wind data starting with the same cutoffs as chosen above
-#this time however, we will us a while loop and datetime objects to retrieve 3 day time intervals instead of
-#checking each data point individually
-#Here we will create an array to hold our true
-sw_binary0 = np.zeros(math.ceil(len(time) / (120)))
-window_size0 = timedelta(days=5)
-start, stop = time[0], time[-1]
-idx = 0
-count = 0
-while start + window_size0 < stop:
-    end = start + window_size0
-    locations = (time >= start) & (time < end)
-    subset = dst[locations]
-    c = 0
-    if np.max(swavgB_filt[locations]) > 15:
-        c = c+1
-    if np.max(swdensity_filt[locations]) > 15:
-        c = c+1
-    if np.max(swpressure_filt[locations]) > 10:
-        c = c+1
-    if np.max(swtemp_filt[locations]) > 5*10**5:
-        c = c+1
-    if np.max(swvelocity_filt[locations]) > 550:
-        c = c+1
-    if c >=3:
-        sw_binary0[idx] = True
-    else:
-        sw_binary0[idx] = False
-    start += window_size0
-    idx += 1
-
-
 # %% [markdown]
-# ### Re-code binary list calculations within a function for repeatability
+# ### Windowed Approach
+# To solve this issue, we advanced to a longer window length, starting here with a 5 day window.  In the windowed approach, we break the time period up into equal length windows (in this case 5 days each), and step through each window, starting with the beginning of our time period.  If the parameter crossed the cutoff at some point during the window, we consider that an indication of an event.  In the case of the solar wind data, we require at least three or more of the parameters to have crossed the cutoff in order for an event to be detected.  For each window we record whether there was (True) or wasn't (False) an event, for both the dst and solar wind values.
 
 # %%
-#Here we define a function which will record the true/false values for our DST data
 def calc_dst_binary(window_size, cutoff):
     '''Creates a true or false array for whether or 
     not a dst event exists in each time interval
-    window is the window size in days
-    cutoff is the dst index below which we count an event, in units of nano-Teslas
+
+    Parameters:
+        window_size is the window size in days
+        cutoff is the dst index below which we count an event, in units of nano-Teslas
 
     Returns: binary event T/F array for dst data
     '''
+    #create an empty array to hold our t/f values
     dst_binary = np.zeros(math.ceil(len(time) / (window_size * 24)))
+    #set our window variable equal to a datetime range of 5 days
     window = timedelta(days=window_size)
     start, stop = time[0], time[-1]
     idx = 0
+    #use while loop to step through time period and find values for all intervals
     while start + window < stop:
+        #define the end of the current interval
         end = start + window
+        #filter the dst data to grab only the indices within our current window
         locations = (time >= start) & (time < end)
         subset = dst[locations]
+        #determine if there is a storm or not based on the minimum value and cutoff
         if(np.min(subset) < cutoff):
             dst_binary[idx] = True
+        #update the window start time and array index
         start += window
         idx += 1
     return dst_binary
 
 
 # %%
-#Here we define a function which will record the true/false values for our solar wind data
 def calc_sw_binary(window_size, cutoffs):
     '''Creates a true or false array for whether or 
     not a sw event exists in each time interval
-    window is the window size in days
-    cutoffs is an array that gives the cutoffs for each variable in the following order:
-    [swavgB_filt (nT), swdensity_filt (km/s), swpressure_filt (nPa), swtemp_filt (K), swvelocity_filt (n per cc)]
+
+    Parameters:
+        window_size is the window size in days
+        cutoffs is an array that gives the cutoffs for each variable in the following order:
+        [swavgB_filt (nT), swdensity_filt (km/s), swpressure_filt (nPa), swtemp_filt (K), swvelocity_filt (n per cc)]
 
     Returns: binary event T/F array for sw data
     '''
+    #create an empty array to hold our t/f values
     sw_binary = np.zeros(math.ceil(len(time) / (window_size * 24)))
+    #create window variable and set start and stop as the beginning and end of the time period
     window = timedelta(days=window_size)
     start, stop = time[0], time[-1]
     idx = 0
-    count = 0
+    #use while loop to step through time period and find values for all intervals
     while start + window < stop:
+        #define the end of the current interval
         end = start + window
         locations = (time >= start) & (time < end)
-        subset = dst[locations]
+        #filter the data to grab only the indices within our current window and
+        #determine whether there is an event within the window for each parameter
         c = 0
         if np.max(swavgB_filt[locations]) > cutoffs[0]:
             c = c+1
@@ -485,14 +516,19 @@ def calc_sw_binary(window_size, cutoffs):
             c = c+1
         if np.max(swvelocity_filt[locations]) > cutoffs[4]:
             c = c+1
+        #if 3 or more of the 5 paramters agree with one another, flag as an event
         if c >=3:
             sw_binary[idx] = True
         else:
             sw_binary[idx] = False
+        #update the window start time and array index
         start += window
         idx += 1
     return sw_binary
 
+
+# %% [markdown]
+# #### Identify and Plot Events:
 
 # %%
 #calculate the T/F array for events in the dst data
@@ -502,7 +538,7 @@ dst_binary = calc_dst_binary(window_size, cutoff)
 
 # %%
 #calculate the T/F array for events in the sw data
-cutoffs = [15, 15, 10, 7.5*10**5, 550]
+cutoffs = [15, 20, 10, 7.5*10**5, 550]
 sw_binary = calc_sw_binary(window_size, cutoffs)
 
 # %%
@@ -536,23 +572,31 @@ print(f'Total event idendified from solar wind data: {int(np.sum(swEvent))}')
 
 fig.tight_layout()
 
+
 # %% [markdown]
-# ## here is binary event anaylsis on two lists 
+# In total, we have identified 259 events in the solar wind data.  This number is much more reasonable than the number identified when we treated each indice past the cutoff as a separate event.  It is important to note a flaw which still remains in this method of dividing up the time period.  It is still possible, for whatever window size is chosen, for multiple events to fall into one window and be counted as one, for one event to be split between two windows and be counted separately, or for an event to occur between windows such that the solar wind data identifies the event as having occurred in a different window than the dst data, such that it is counted as a false alarm and a miss instead of a hit.  While a few occurances like these may occur, we will consider this to be a minor issue to have a negligible effect.  In addition, we will experiment with a range of window sizes to vary our results.
+
+# %% [markdown]
+# # Data Analysis: Binary Event Analysis
+#
+# ## What is Binary Event Analysis and Why is it Applicable?
+#
+# Binary Event Analysis takes two arrays that are both in binary form and compares them, creating a matrix of values organized into sections of True positives, False positives, True negatives, and False negatives. By creating this matrix, the user is able to compare the two lists and determine correlation. 
+#
+# This type of analysis great for simplifying the data and classifying the prediction of extreme events. This was very applicable to our analysis because we wished to see just how good our data was at predicting events once the periodicities were removed. Binary event analysis also allows for the use of Receiver Operating Characteristic style analysis, which compares True positives to False positives. This topic will be discussed in detail later in the document.
+#
+# ## The Function and its Functionality
+#
+# ADD ANALYSIS HERE
 
 # %%
-## here is binary event anaylsis on two lists that we can edit later --- just wanted to have something before wed
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-
-
-def binary_event_analysis(list1, list2):
+def binary_event_analysis(list1, list2, printit = True):
     """
     Analyzes two binary event lists.
     
     Parameters:
     - list1, list2: Lists of binary values of equal length.
+    - if all calculation and tables should automatically be printed
     
     This function computes:
       - A contingency table for the two lists.
@@ -579,24 +623,28 @@ def binary_event_analysis(list1, list2):
     # Total number of observations
     N = a + b + c + d
     # Print contingency table
-    print("Contingency Table:")
-    print("                list2=1   list2=0")
-    print(f"list1=1        {a:<9} {b}")
-    print(f"list1=0        {c:<9} {d}\n")
+    if printit:
+        print("Contingency Table:")
+        print("                list2=1   list2=0")
+        print(f"list1=1        {a:<9} {b}")
+        print(f"list1=0        {c:<9} {d}\n")
     
     # Compute phi coefficient
     numerator = a * d - b * c
     denominator = np.sqrt((a + b) * (c + d) * (a + c) * (b + d))
     phi = numerator / denominator if denominator != 0 else np.nan
-    print(f"Phi coefficient (correlation): {phi:.4f}")
+    if printit:
+        print(f"Phi coefficient (correlation): {phi:.4f}")
     
     # Calculate Odds Ratio
     if b * c == 0:
         odds_ratio = np.inf if a * d > 0 else np.nan
-        print("Odds Ratio: Division by zero occurred (one of b or c is 0); odds ratio set to infinity if numerator > 0.")
+        if printit:
+            print("Odds Ratio: Division by zero occurred (one of b or c is 0); odds ratio set to infinity if numerator > 0.")
     else:
         odds_ratio = (a * d) / (b * c)
-        print(f"Odds Ratio: {odds_ratio:.4f}")
+        if printit:
+            print(f"Odds Ratio: {odds_ratio:.4f}")
     
     # Calculate additional performance metrics
     # Hit Rate: Proportion of actual positive events (list2) that were correctly forecast
@@ -611,42 +659,44 @@ def binary_event_analysis(list1, list2):
     Precision = (a) / (a + b) if (a) != 0 else np.nan
     Recall = (a) / (a + c) if (a) != 0 else np.non
     
-    print(f"\nHit Rate (True Positive Rate): {hit_rate:.4f}")
-    print(f"False Alarm Rate: {false_alarm_rate:.4f}")
-    print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
-    print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
-    print(f"Precision: {Precision}")
-    print(f"Recall: {Recall}")
+    if printit:
+        print(f"\nHit Rate (True Positive Rate): {hit_rate:.4f}")
+        print(f"False Alarm Rate: {false_alarm_rate:.4f}")
+        print(f"Proportion Correct (Overall Accuracy): {proportion_correct:.4f}")
+        print(f"False Alarm Ratio: {false_alarm_ratio:.4f}")
+        print(f"Precision: {Precision}")
+        print(f"Recall: {Recall}")
 
     # Calculate Heidke Skill Score (HSS)
     # Expected accuracy by chance
     Pe = ((a + b) * (a + c) + (c + d) * (b + d)) / (N * N) if N != 0 else np.nan
     # HSS: (observed accuracy - expected accuracy) / (1 - expected accuracy)
     HSS = (proportion_correct - Pe) / (1 - Pe) if (1 - Pe) != 0 else np.nan
-    print(f"Heidke Skill Score: {HSS:.4f}")
+    if printit:
+        print(f"Heidke Skill Score: {HSS:.4f}")
     
+    if printit:
+        plt.figure(figsize=(6, 4))
+        
+        plt.imshow(contingency_table, cmap="RdPu", vmin=0, vmax=200)
 
-    plt.figure(figsize=(6, 4))
-    
-    plt.imshow(contingency_table, cmap="RdPu", vmin=0, vmax=200)
+        #adding a colorbar to display the mapping of colors to numerical values.
+        plt.colorbar()
 
-    #adding a colorbar to display the mapping of colors to numerical values.
-    plt.colorbar()
+        plt.title('Map of Confusion Matrix')
+        plt.xlabel('Observed Values (DST Index)')
+        plt.ylabel('Forecasted Values (Solar Wind)')
 
-    plt.title('Map of Confusion Matrix')
-    plt.xlabel('Observed Values (DST Index)')
-    plt.ylabel('Forecasted Values (Solar Wind)')
+        plt.xticks(ticks=[0, 1], labels=['1', '0'])
+        plt.yticks(ticks=[0, 1], labels=['1', '0'])
 
-    plt.xticks(ticks=[0, 1], labels=['1', '0'])
-    plt.yticks(ticks=[0, 1], labels=['1', '0'])
+        #get the numeric values
+        for i in range(contingency_table.shape[0]):
+            for j in range(contingency_table.shape[1]):
+                plt.text(j, i, str(contingency_table[i, j]),
+                        ha="center", va="center", color="black")
 
-    #get the numeric values
-    for i in range(contingency_table.shape[0]):
-        for j in range(contingency_table.shape[1]):
-            plt.text(j, i, str(contingency_table[i, j]),
-                     ha="center", va="center", color="black")
-
-    plt.show()
+        plt.show()
 
     # Return all results as a dictionary
     return {
@@ -663,17 +713,72 @@ def binary_event_analysis(list1, list2):
     }
 
 
-# %%
-#try out the binary analysis function, natalie please feel free to fix this part up and do it properly later!
-binary_event_analysis(dst_binary, sw_binary)
-print('\n yay!  we have some stats! *high five*')
+# %% [markdown]
+# ## Binary Event Analysis: Our Data's Original Output
+#
+# Once the values of both arrays were reduced to 0/1 values depending on if an event occured, we compared the Solar data to our DST data and created a confusion matrix to represent our results. We decided to calculate a couple other statistics as listed below, such as the correlation between the two arrays, the precision, the recall, and Heidke’s Skill Score. 
+#
+# The correlation explains how closely our an analyzed solar data follows the DST data, the precision calculates the amount of positive values that we predicted correctly, recall calculates, out of the amount of actual positives, how many events did we correctly predict, and Heidke’s Skill Score shows how much better our predictions are from random chance.
 
 # %%
-import math
-from datetime import timedelta
-from scipy.stats import qmc
+#Run the binary event analysis function on our dst event and solar wind event lists
+print(binary_event_analysis(dst_binary, sw_binary))
+
+# %% [markdown]
+# **THIS SUCKS AND NEEDS TO BE EDITED**
+#
+# The range for Heidke’s Skill Score is from -1 to 1, with 0 representing random chance. Our values were a correlation of 0.4446, a precision of 0.5307, a recall of 0.5135, and a Hedike skill score of 0.4445. These values show that while our process of identifying these events using the solar data does work better than random chance, it is not necessarily the best. Similarly, our hit rate was 0.5135 and our false alarm rate was 0.0750, which shows our process is great at not predicting events when they did not happen, but not the best at predicting when they did. 
+#
+#
+# ADD More anslysis about what the numbers mean    -- start with overall accuracy and then explain more about what each number represnts
+
+# %% [markdown]
+# ### Running Binary Event Analysis with Different Values
+# To ensure that we picked the best window size and thresholds, we reran the binary event analysis with different values of threshold for identifying an event with solar wind and window size for the data. To evalute our success we looked at specifically the Heidke Skill score at it shows how well our prediction is at its job despite the large number of true numbers. We did this for window size from 4-7 days and 3 different cutoff thresholds for the solar wind (lower, medium and high thresholds). We only did a few because it would take 7+ hours to run all combinations. These threshold were chosen based on how the solar wind parameter were impacted for the 4/23/23 storm plotted above and the change in the new filtered data from the ifft. *Note - while this won't take 7 hours to run, it will take around 4-5 minutes to run so please be patient.*
+
+# %%
+# set for all due to theory of DST cutoff showing actual event
+dstcutoff = -75 #nT
+# for loop that gets skill score for 4-7 day window sizes and 3 different solar wind parameter thresholds for each
+for window_size in range (4,8):
+    # gets dst for the windowsize
+    dst_binary = calc_dst_binary(window_size, cutoff)
+    # low thresholds
+    swcutoffs1 = [10, 15, 7.5, 5*10**5, 500]
+    # medium thresholds
+    swcutoffs2 = [15, 20, 10, 7.5*10**5, 550]
+    # high thresholds
+    swcutoffs3 = [20, 25, 12, 8*10**5, 600]
+    sw_binary1 = calc_sw_binary(window_size, swcutoffs1)
+    sw_binary2 = calc_sw_binary(window_size, swcutoffs2)
+    sw_binary3 = calc_sw_binary(window_size, swcutoffs3)
+    print(f'Window size: {window_size} days')
+    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binary, sw_binary1, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binary, sw_binary1, False)["proportion_correct"]:.6f}  for low solar wind thresholds')
+    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binary, sw_binary2, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binary, sw_binary2, False)["proportion_correct"]:.6f}  for day window and medium solar wind thresholds')
+    print(f'\tHeidke Skill Score: {binary_event_analysis(dst_binary, sw_binary3, False)["heidke_skill_score"]:.6f} \t Overall Accuracy: {binary_event_analysis(dst_binary, sw_binary3, False)["proportion_correct"]:.6f}  for day window and high solar wind thresholds')
 
 
+# %% [markdown]
+# Overall, the medium thresholds produced the highest Heidke Skill score showing that the best thresholds for identifying solar events was our medium level thresholds. Additionally, as the window size increases the skill score increase. However, the 6 and 7 day window shows very little difference in the skill score. It is also important to note that the window size shouldn't be made too big because then it could overcorrect for the time delay/long term effect with the DST Index and therfore could be counting 2 seperate events as 1. Overall, the best overall accuracy does not align with the skill score. This is because a window size and/or thresholds can greatly increase the true negative number skewing the overall accuracy number to be higher despite the prediction being worse. This shows why we chose to focus on the skill score for our analysis as it removes the bias and high numbers of true negatives from the data and looks more at prediction accuracy.
+
+# %% [markdown]
+# # Data Analysis: ROC-Style Latin Hypercube Sampling
+#
+# Based on our above analysis, we decided to consider many of the factors that influenced how well our process identified events correctly. Since we were working with multiple values like window size, flow pressure, plasma temperature, and more, we wanted to find a way to alter the numerical values used for the thresholds of these values during analysis in order to see what was the best combination to predict these DST events. To streamline this process, we decided to use ROC-Style Latin Hypercube Sampling.
+#
+# ### What are LHS and ROC?
+#
+# Latin hypercube Sampling is a smart sampling technique to explore multidimensional parameter spaces. It takes each parameters range and ensures that each interval is sampled once. Since we would have had an output of thousands of points, using LHS allows us to cut this down to 200 points that is still representative of our data.    
+#
+# ROC curves are used to evaluate binary classification performance which shows the true positive rate vs the false positive rate. We chose to combine these two ideas and produce a plot that is representative of many possible combinations
+#
+
+# %% [markdown]
+# ### Our Function and its Functionality
+# *Note: takes a while to load*     
+# The code explores a wide range of threshold combinations using Latin Hypercube Sampling, a method that ensures broad coverage of the parameter space with a limited number of trials. For each combination, the model classifies time periods as either containing a storm event or not, based on whether certain solar wind values exceed specified thresholds. These predictions are then compared against actual DST-based events to compute hit rates and false alarm rates. Ultimately, this analysis helps determine which parameter combinations are best at capturing true geomagnetic activity while minimizing false positives. The results are visualized in a ROC-style plot, with the top-performing configurations highlighted, providing insight into which solar wind features are most predictive of space weather disturbances.    
+
+# %%
 window_day = timedelta(days=1) #start with 1 day window
 start, stop = time[0], time[-1] #start and end of data set
 n_windows_1d = math.ceil((stop - start) / window_day) #how many one day windows fit in the period
@@ -697,6 +802,9 @@ for i in range(n_windows_1d):  #loop over each day-index from 0 to the number of
 #helper function to take window size, dst threshold, and array of sw vals and return a boolian to
 #say if the event occured or not
 def compute_events(window_days, dst_cut, sw_cuts, sw_thresh=3):
+    '''
+    DOC STRING
+    '''
     step = window_days
     n_int = math.ceil(n_windows_1d / step) #find how many sections of the windowed days fit in the whole space
     dst_ev = np.zeros(n_int, dtype=bool) #empty list to hold vals (bool)
@@ -710,6 +818,9 @@ def compute_events(window_days, dst_cut, sw_cuts, sw_thresh=3):
 
 #convert the booleans into hit rate/false alarm rate
 def get_rates(dst_ev, sw_ev):
+    '''
+    DOC String
+    '''
     a = np.sum(dst_ev & sw_ev)
     b = np.sum(dst_ev & ~sw_ev)
     c = np.sum(~dst_ev & sw_ev)
@@ -731,7 +842,9 @@ param_lists = {
 
 #latin hypercube sampling -- parameter range is sampled evenly, but only 200 samples are taken
 keys = list(param_lists.keys()) #hold parameters
-sampler = qmc.LatinHypercube(d=len(keys)) #do the latinhypercube
+#the seed argument keeps the numpy.random.Generator consistent when re-running the cell on the same machine
+# results may vary across different computers
+sampler = qmc.LatinHypercube(d=len(keys), seed=23) #do the latinhypercube
 samples = sampler.random(n=200) #hold samples
 
 hrs, fars, combos = [], [], []
@@ -779,7 +892,7 @@ plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
 
-# 8)print the top 3 combos
+# print the top 3 combos
 print("Top 3 parameter combos (high HR, low FAR):")
 for rank, (hr, far, combo) in enumerate(top3, start=1):
     print(f"\nRank {rank}:")
@@ -794,79 +907,49 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
     print(f" False Alarm Rate: {far:.3f}")
 
 # %% [markdown]
-# ## Conclusions
+# ### ROC-Style LHS: Our Data's Outcome
+#
+# Our plot and results are shown above. For simplicity, the top three parameter combinations are labeled by the function. As you can see, any of these options was much better than those chosen by us in our original analysis, as seen by the hit rate vs false alarm rate. Of course there were several things that were not considered here, such as Heidke’s Skill Score, so in the future more analysis would be beneficial.  
+#
+# Latin Hypercube Sampling is particulary valuable for this analysis becayse it allowed us to examine all the parameters in our space much more effectively than a random sample. But, most importantly, it allowed us to get representative statistics without needed to comb through every single combination OR taking hours to run. One of the downsides, however, to Latin Hypercube Sampling is that all of the sampling outcomes are generated at once, meaning that each run produces a slightly different outcome. When we generated this plot multiple times, it was quite similar, but not exact. 
+#
+
+# %% [markdown]
+# ## Conclusions and Next Steps
 # Synthesize the conclusions from your results section here. Give overarching conclusions. Tell us what you learned.
 # ## References
 #
 
-# %%
-#Here is a ROC curve along with some analysis: 
-from sklearn.metrics import roc_curve, auc
-from datetime import timedelta
-
-#ROC Curve Function 
-def plot_roc_from_scores(true_labels, condition_scores):
-    """
-    Generates and plots an ROC curve from binary true labels and discrete prediction scores.
-    
-    Parameters:
-    - true_labels: Array-like of 0s and 1s representing actual event occurrences (e.g., dst_binary)
-    - condition_scores: Array-like of integers (0–5) representing the number of solar wind thresholds met
-
-    Output:
-    - Displays ROC curve and prints AUC.
-    """
-    y_true = np.array(true_labels)
-    y_scores = np.array(condition_scores)
-
-    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
-    roc_auc = auc(fpr, tpr)
-
-    plt.figure(figsize=(6, 5))
-    plt.plot(fpr, tpr, color='pink', lw=2,
-             label=f'ROC Curve (AUC = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='No Skill')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve for Solar Wind Event Forecasting')
-    plt.legend(loc='lower right')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-    print(f"AUC (Area Under Curve): {roc_auc:.4f}")
-    return 
-
-
-sw_score = np.zeros(math.ceil(len(time) / 120))
-window_size = timedelta(days=5)
-start, stop = time[0], time[-1]
-idx = 0
-
-while start + window_size < stop:
-    end = start + window_size
-    locations = (time >= start) & (time < end)
-    
-    c = 0
-    if np.max(swavgB_filt[locations]) > 15:
-        c += 1
-    if np.max(swdensity_filt[locations]) > 15:
-        c += 1
-    if np.max(swpressure_filt[locations]) > 10:
-        c += 1
-    if np.max(swtemp_filt[locations]) > 7.5 * 10**5:
-        c += 1
-    if np.max(swvelocity_filt[locations]) > 550:
-        c += 1
-
-    sw_score[idx] = c  # Store the score (0–5)
-    start += window_size
-    idx += 1
-
-plot_roc_from_scores(dst_binary, sw_score)
-
 # %% [markdown]
 #
+# [1]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A. Bowman, “The Heliospheric Current Sheet,” nasa.gov, Aug 5, 2013. [Online]. Available: https://www.nasa.gov/image-article/heliospheric-current-sheet/ [Accessed: April 14, 2025].
+#
+# [2]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A. Case, J. Kasper, K. Korrek, and M. Stevens, “A Catalog of Solar Stream Interactions,” cfa.harvard.edu, Sept 17, 2021. [Online]. Available: https://www.cfa.harvard.edu/news/catalog-solar-stream-interactions/  [Accessed: April 14, 2025].
+#
+# [3]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;D. Hathaway, “Coronal Features,” nasa.gov, Aug 11, 2014. [Online]. Available: https://solarscience.msfc.nasa.gov/feature3.shtml [Accessed: April 14, 2025].
+#
+# [4]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;D. Hathaway, “The Solar Cycle,” *Living Rev. Sol. Phys.* 12, 4, 2015. Available: https://link.springer.com/content/pdf/10.1007/lrsp-2015-4.pdf [Accessed: April 14, 2025].
+#
+# [5]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;I. Jolliffe, D. Stephenson, *Forecast Verification A Practitioner’s Guide in Atmospheric Science*, West Sussex, England:John Wiley &  Sons Ltd.
+#
+# [6]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;J. Borovsky and M. Denton, “The Difference Between CME-Driven Storms and CIR-Driven Storms,” *JOURNAL OF GEOPHYSICAL RESEARCH, VOL. 111, A07S08*, July 26, 2006. Available: https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2005JA011447 [Accessed: April 14, 2025].
+#
+# [7]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;J. Giacalone. Heliophysics Summer School. Powerpoint Lecture, Topic: “The Parker spiral magnetic field” University of Arizona, Lunar and Planetary Laboratory, Tuscan, AZ, Aug. 5 2022.
+#
+# [8]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;J. Palacios, A. Guerrero, C Cid, E. Saiz, and Y, Cerrato, “Defining Scale Thresholds for Geomagnetic Storms Through Statistics,” *Natural Hazards and Earth System Sciences Discussions*, April 12, 2015. Available: https://nhess.copernicus.org/preprints/nhess-2018-92/nhess-2018-92.pdf [Accessed: April 14, 2025].
+#
+# [9]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;K. Hansen, “Predicting Binary Events,” bar.rady.ucsd.edu, 2023. [Online]. Available: https://bar.rady.ucsd.edu/bin_class.html/ [Accessed: April 14, 2025].
+#
+# [10]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;M. Greenwood, “How to Use Latin Hypercube Sampling in Python,” hatchjs.com. [Online]. Available: https://hatchjs.com/latin-hypercube-sampling-python/ [Accessed: April 16, 2025].
+#
+# [11]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R. Schwenn, “Solar Wind Sources and Their Variations Over the Solar Cycle,” Space Sciences Series of ISSI, 2006. Available: https://link.springer.com/chapter/10.1007/978-0-387-69532-7_5#Bib1 [Accessed: April 14, 2025].
+#
+# [12]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SciPy community, “Latin Hypercube – SciPy v1.15.2 Manual,” docs.scipy.org. [Online]. Available: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.LatinHypercube.html  [Accessed: April 16, 2025].
+#
+# [13]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Z. Bobbitt, “What is Latin Hypercube Sampling?,” statology.org, Sept 13, 2020. [Online]. Available: https://www.statology.org/latin-hypercube-sampling/ [Accessed: April 16, 2025].
+
+# %% [markdown]
+# ### Roles & Contributions
 
 # %% [markdown]
 #
