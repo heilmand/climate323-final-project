@@ -608,8 +608,6 @@ fig.tight_layout()
 # This type of analysis is great for simplifying the data and classifying the prediction of extreme events. This was very applicable to our analysis because we wished to see just how good our data was at predicting events once the periodicities were removed. Binary event analysis also allows for the use of Receiver Operating Characteristic style analysis, which compares True positives to False positives. This topic will be discussed in detail later in the document.
 #
 # ## The Function and its Functionality
-#
-# # ADD ANALYSIS HERE
 
 # %%
 def binary_event_analysis(list1, list2, printit = True):
@@ -996,7 +994,16 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 # %% [markdown]
 # ## Conclusions and Next Steps
 #
-# TThe first conclusion we can make is that the solar wind does follow periodic behavior. Specifically solar wind wind follows period behavior that aligns with the solar cycle and the solar rotation cycle. By removing these dominant frequencies, the data is then filtered from the natural cycle of the solar wind so outliers can be found or solar events.
+# We found that yes, we were able to identify events in the solar wind by removing periodic behavior.  Specifically, solar wind follows periodic behavior that aligns with the solar activity and rotation cycles, and by removing these dominant frequencies, the data is filtered from the natural cycle of the solar wind so solar events can be found.
+#
+# Due to the duration of events, and the differences in how long different variables were affected, we opted to use an approach with a longer window in our binary event analysis rather than an hourly (data point by data point) window.  We began by trying a 5 day window, but also went on to explore a range of window lengths from 1 to 10 days.  This helped to more accurately count indices that were part of the same event as one, and to reduce the impact on our results from events falling on the window boundary.  One future experiment could involve trying to match these different manifestation behaviors in data sets to more accurately pick out what kind of events are happening.
+#
+# Using binary event analysis, we found that our event detection method had decent accuracy when applied to our windowed data set, with one caveat. We had an 88% overall accuracy, but a Heidke skill score of only 0.38.  Examining the confusion matrix, it is clear that our accuracy result was inflated by being able to predict the null result well, despite our ability to predict the events themselves still being rather poor.  The Heidke skill score showed what we had was rather accurate, and additionally was better than random chance guessing. However, to get the best Heidke skill score several combinations of window sizes and solar wind parameters need to be tried. Completing this process manually with a thorough grid search approach takes too long to run for the time of this project but could be explored in the future. By running this analysis with a few combinations of window sizes and solar thresholds the Heidke skill score increases with the window size with 7 and 6 days being very close. Additionally, the medium solar wind threshold levels produced the highest Heidke skill scores for all window sizes. From this testing we found that the highest Heidke skill score meaning that our prediction was better than random chance was for the medium level thresholds and a window size of 6 or 7 days.
+#
+# In an attempt to better explore changing multiple of the variables at once, we used Latin Hypercube Sampling on ROC-style axes.  The ROC style axes compare the hit rate to the false alarm rate and we decided to choose our best result from the LHS samples using these metrics. In one of the runs, it produced a high 94% hit rate for a window size of 7 days and the second highest with a hit rate of 84% and 5 day window. This supports the results obtained from our manual trials with the predictions being better for 5-7 day window sizes. Overall, this was very helpful in allowing us to analyze different parameters for event identification without manually trying every combination, which would take 7+ hours to compute. With both the binary event analysis and ROC-Style Latin Hypercube Sampling, we can conclude that events can be identified by removing the dominant frequencies of the solar wind better than just random chance.  
+#
+# This is not all that can be done with this data, with more time it may be advantageous to thoroughly test more window sizes and parameters in order to find one that produces the best optimization depending on the desired result. Additionally, performing analysis using a lag time difference between the DST Index and the solar wind parameters in the future could result in better predictions and comparing it with the severity of the solar event. 
+#
 
 # %% [markdown]
 # ## References
@@ -1044,6 +1051,3 @@ for rank, (hr, far, combo) in enumerate(top3, start=1):
 # Daniel 💗: Helped with background research and context. Identifying events in the dst and filtered solar wind data.  Figuring out binary event analysis and sampling (credit to natalie for the code for this).
 #
 # +Dan points for continued theme?
-
-# %% [markdown]
-#
